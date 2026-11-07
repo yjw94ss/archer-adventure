@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>枫之谷 · 弓箭手传说</title>
+<link rel="stylesheet" href="css/ui.css" />
+</head>
+<body>
+<div id="stage">
+  <canvas id="game" width="1280" height="720"></canvas>
+
+  <div id="ui">
+    <!-- ================= 左上：角色状态 ================= -->
+    <div class="hud hud-tl">
+      <div class="status-plate">
+        <div class="char-panel">
+          <div class="portrait">
+            <canvas id="portrait-canvas" width="80" height="80"></canvas>
+            <div class="lv-badge" id="lv-badge">1</div>
+          </div>
+          <div class="char-info">
+            <div class="char-head">
+              <span class="char-name" id="char-name">Lv.1 弓箭手</span>
+              <span class="channel">CH.1</span>
+            </div>
+            <div class="bar hp">
+              <div class="fill" id="hp-fill"></div>
+              <div class="gloss"></div>
+              <span class="num" id="hp-text">100 / 100</span>
+            </div>
+            <div class="bar mp">
+              <div class="fill" id="mp-fill"></div>
+              <div class="gloss"></div>
+              <span class="num" id="mp-text">55 / 55</span>
+            </div>
+          </div>
+        </div>
+        <div class="exp-bar">
+          <div class="fill" id="exp-fill"></div>
+          <span id="exp-text">EXP 0.0%</span>
+        </div>
+        <div class="mini-stats">
+          <span><i class="mini-ico atk"></i>攻击 <b id="mini-atk">30</b></span>
+          <span><i class="mini-ico crit"></i>暴击 <b id="mini-crit">14%</b></span>
+          <span><i class="mini-ico def"></i>防御 <b id="mini-def">0</b></span>
+          <span><i class="mini-ico meso"></i>金币 <b id="mini-gold">0</b></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 右上：小地图 & 任务追踪 ================= -->
+    <div class="hud hud-tr">
+      <div class="map-panel">
+        <div class="map-head">
+          <span class="dot"></span>
+          <span id="map-name">蘑菇森林</span>
+          <span class="map-ch">CH.1</span>
+        </div>
+        <div class="map-body"><canvas id="minimap-canvas" width="216" height="148"></canvas></div>
+        <div class="map-foot"><span>射手村 · 郊外</span><span id="map-online">在线 32</span></div>
+      </div>
+      <div class="quest-track" id="quest-tracker"></div>
+    </div>
+
+    <!-- ================= BOSS 血条 ================= -->
+    <div class="boss-bar" id="boss-bar">
+      <div class="boss-name"><span id="boss-name">蘑菇王</span><span class="boss-lv" id="boss-lv">Lv.12</span></div>
+      <div class="boss-hp"><div class="fill" id="boss-hp-fill"></div><span id="boss-hp-text">2400 / 2400</span></div>
+    </div>
+
+    <!-- ================= 左下：战斗日志 ================= -->
+    <div class="log-box" id="log-box"></div>
+    <div class="toast-wrap" id="toast-wrap"></div>
+
+    <!-- ================= 底部：技能栏 / 菜单 ================= -->
+    <div class="hud-bottom">
+      <div class="quick-wrap">
+        <div class="buff-bar" id="buff-bar"></div>
+        <div class="quick-bar" id="quick-bar"></div>
+        <div class="quick-hint">Z / 左键 射击 &nbsp;·&nbsp; 空格 跳跃 &nbsp;·&nbsp; ↑↓ 攀爬与瞄准</div>
+      </div>
+      <div class="menu-row">
+        <button class="menu-btn" data-panel="inventory"><span class="mb-ico">▤</span>背包<kbd>I</kbd></button>
+        <button class="menu-btn" data-panel="stats"><span class="mb-ico">✦</span>属性<kbd>C</kbd></button>
+        <button class="menu-btn" data-panel="quests"><span class="mb-ico">!</span>任务<kbd>T</kbd></button>
+        <button class="menu-btn" data-panel="help"><span class="mb-ico">?</span>帮助<kbd>H</kbd></button>
+        <button class="menu-btn sound-btn" id="sound-btn"><span class="mb-ico">♪</span>音效</button>
+      </div>
+    </div>
+
+    <!-- ================= 面板：背包 ================= -->
+    <div class="panel panel-inv" id="panel-inventory" hidden>
+      <div class="panel-head">
+        <span class="panel-title">背包</span>
+        <span class="panel-sub">INVENTORY</span>
+        <button class="close-btn" data-close>✕</button>
+      </div>
+      <div class="panel-body inv-body">
+        <div class="inv-left">
+          <div class="inv-tabs" id="inv-tabs">
+            <button class="tab active" data-tab="all">全部</button>
+            <button class="tab" data-tab="equip">装备</button>
+            <button class="tab" data-tab="use">消耗</button>
+            <button class="tab" data-tab="etc">其他</button>
+          </div>
+          <div class="inv-grid" id="inv-grid"></div>
+          <div class="inv-foot">
+            <span class="meso-ico">M</span>
+            <b id="inv-meso">0</b>
+            <span class="inv-count" id="inv-slots">0 / 24</span>
+          </div>
+        </div>
+        <div class="inv-right">
+          <div class="side-title">装备栏</div>
+          <div class="equip-slots" id="equip-slots"></div>
+          <div class="side-title">装备加成</div>
+          <div class="equip-summary" id="equip-summary"></div>
+          <div class="side-title">战斗属性</div>
+          <div class="combat-summary" id="combat-summary"></div>
+          <div class="inv-tip">点击道具使用 / 装备，右键卸下装备</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 面板：属性 ================= -->
+    <div class="panel panel-stat" id="panel-stats" hidden>
+      <div class="panel-head">
+        <span class="panel-title">角色属性</span>
+        <span class="panel-sub">STATUS</span>
+        <button class="close-btn" data-close>✕</button>
+      </div>
+      <div class="panel-body">
+        <div class="stat-top">
+          <div class="stat-portrait"><canvas id="stat-portrait" width="96" height="96"></canvas></div>
+          <div class="stat-id">
+            <div class="stat-name">Lv.<b id="stat-level">1</b> 弓箭手</div>
+            <div class="stat-class">职业：弓箭手 · 远程物理</div>
+            <div class="stat-exp">EXP <span id="stat-exp">0 / 0</span></div>
+            <div class="ap-line">剩余能力点 <b id="ap-left">0</b></div>
+          </div>
+        </div>
+        <div class="stat-list" id="stat-list"></div>
+      </div>
+    </div>
+
+    <!-- ================= 面板：任务 ================= -->
+    <div class="panel panel-quest" id="panel-quests" hidden>
+      <div class="panel-head">
+        <span class="panel-title">任务日志</span>
+        <span class="panel-sub">QUEST</span>
+        <button class="close-btn" data-close>✕</button>
+      </div>
+      <div class="panel-body">
+        <div class="quest-list" id="quest-list"></div>
+      </div>
+    </div>
+
+    <!-- ================= 面板：帮助 ================= -->
+    <div class="panel panel-help" id="panel-help" hidden>
+      <div class="panel-head">
+        <span class="panel-title">操作说明</span>
+        <span class="panel-sub">HELP</span>
+        <button class="close-btn" data-close>✕</button>
+      </div>
+      <div class="panel-body">
+        <div class="help-grid">
+          <div class="hk"><kbd>←</kbd><kbd>→</kbd><span>左右移动</span></div>
+          <div class="hk"><kbd>↑</kbd><kbd>↓</kbd><span>攀爬绳索 / 梯子，调整射角</span></div>
+          <div class="hk"><kbd>空格</kbd><span>跳跃；↓ + 空格 跳下平台</span></div>
+          <div class="hk"><kbd>Z</kbd><span>普通射击（可按住连射）</span></div>
+          <div class="hk"><kbd>鼠标</kbd><span>自由瞄准，左键射击</span></div>
+          <div class="hk"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd><span>技能：三连箭 / 贯穿箭 / 箭雨 / 鹰眼</span></div>
+          <div class="hk"><kbd>5</kbd><kbd>6</kbd><span>饮用红色 / 蓝色药水</span></div>
+          <div class="hk"><kbd>I</kbd><span>背包</span></div>
+          <div class="hk"><kbd>C</kbd><span>角色属性（分配能力点）</span></div>
+          <div class="hk"><kbd>T</kbd><span>任务日志</span></div>
+          <div class="hk"><kbd>ESC</kbd><span>关闭面板</span></div>
+        </div>
+        <div class="help-tips">
+          <p>· 弓箭手是远程职业，保持距离、利用高台与绳索风筝怪物是核心思路。</p>
+          <p>· 击杀怪物获得经验与战利品，升级后获得 5 点能力点，优先加 DEX 提升攻击力。</p>
+          <p>· 森林深处潜伏着 Lv.12 的蘑菇王，建议 8 级后带上足够的药水再去挑战。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 受击红屏 -->
+    <div class="hurt-flash" id="hurt-flash"></div>
+
+    <!-- 升级横幅 -->
+    <div class="levelup-banner" id="levelup-banner">
+      <span class="lu-main">LEVEL UP!</span>
+      <span class="lu-sub" id="lu-sub">Lv.2</span>
+    </div>
+
+    <!-- 死亡提示 -->
+    <div class="death-veil" id="death-veil">
+      <div class="death-text">你被击倒了…</div>
+    </div>
+
+    <!-- 道具/技能提示 -->
+    <div class="tooltip" id="tooltip"></div>
+  </div>
+
+  <!-- ================= 开始界面 ================= -->
+  <div class="start-screen" id="start-screen">
+    <div class="start-glow"></div>
+    <div class="start-card">
+      <div class="start-tag">FAN-MADE TRIBUTE · 2D SIDE-SCROLLER</div>
+      <h1>枫之谷<span>·</span>弓箭手传说</h1>
+      <p class="start-sub">在蘑菇森林里拉开长弓，成为守护射手村的猎人。</p>
+      <div class="start-features">
+        <div class="feat"><b>远程射击</b><span>鼠标自由瞄准 · 多方向射角</span></div>
+        <div class="feat"><b>四大技能</b><span>三连箭 / 贯穿箭 / 箭雨 / 鹰眼</span></div>
+        <div class="feat"><b>成长系统</b><span>打怪升级 · 掉落装备 · 能力点</span></div>
+        <div class="feat"><b>立体地图</b><span>多层平台 · 绳索梯子 · 小地图</span></div>
+      </div>
+      <div class="start-controls">
+        <span><kbd>A</kbd><kbd>D</kbd> 移动</span>
+        <span><kbd>空格</kbd> 跳跃</span>
+        <span><kbd>Z</kbd>/左键 射击</span>
+        <span><kbd>1</kbd>-<kbd>4</kbd> 技能</span>
+        <span><kbd>↑</kbd><kbd>↓</kbd> 绳索</span>
+        <span><kbd>I</kbd> 背包</span>
+      </div>
+      <button class="start-btn" id="start-btn">进 入 森 林</button>
+      <div class="start-foot">建议使用键盘与鼠标 · 支持全屏窗口体验</div>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/world.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
