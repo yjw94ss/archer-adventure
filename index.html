@@ -9,6 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <title>枫之谷 · 弓箭手传说</title>
 <link rel="stylesheet" href="css/ui.css" />
+<link rel="stylesheet" href="css/polish.css" />
 <link rel="stylesheet" href="css/mobile.css" />
 </head>
 <body>
@@ -43,7 +44,8 @@
         </div>
         <div class="exp-bar">
           <div class="fill" id="exp-fill"></div>
-          <span id="exp-text">EXP 0.0%</span>
+          <span class="exp-l" id="exp-text">EXP 0.0%</span>
+          <span class="exp-r" id="exp-num">0 / 80</span>
         </div>
         <div class="mini-stats">
           <span><i class="mini-ico atk"></i>攻击 <b id="mini-atk">30</b></span>
@@ -83,7 +85,7 @@
       <div class="quick-wrap">
         <div class="buff-bar" id="buff-bar"></div>
         <div class="quick-bar" id="quick-bar"></div>
-        <div class="quick-hint">Z / 左键 射击 &nbsp;·&nbsp; 空格 跳跃 &nbsp;·&nbsp; ↑↓ 攀爬与瞄准</div>
+        <div class="quick-hint">Z / 左键 射击 &nbsp;·&nbsp; 空格 跳跃 &nbsp;·&nbsp; Q E R F 技能 &nbsp;·&nbsp; ↑↓ 攀爬与瞄准</div>
       </div>
       <div class="menu-row">
         <button class="menu-btn" data-panel="inventory"><span class="mb-ico">▤</span>背包<kbd>I</kbd></button>
@@ -170,17 +172,15 @@
       </div>
       <div class="panel-body">
         <div class="help-grid">
-          <div class="hk"><kbd>←</kbd><kbd>→</kbd><span>左右移动</span></div>
-          <div class="hk"><kbd>↑</kbd><kbd>↓</kbd><span>攀爬绳索 / 梯子，调整射角</span></div>
-          <div class="hk"><kbd>空格</kbd><span>跳跃；↓ + 空格 跳下平台</span></div>
-          <div class="hk"><kbd>Z</kbd><span>普通射击（可按住连射）</span></div>
-          <div class="hk"><kbd>鼠标</kbd><span>自由瞄准，左键射击</span></div>
-          <div class="hk"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd><span>技能：三连箭 / 贯穿箭 / 箭雨 / 鹰眼</span></div>
-          <div class="hk"><kbd>5</kbd><kbd>6</kbd><span>饮用红色 / 蓝色药水</span></div>
-          <div class="hk"><kbd>I</kbd><span>背包</span></div>
-          <div class="hk"><kbd>C</kbd><span>角色属性（分配能力点）</span></div>
-          <div class="hk"><kbd>T</kbd><span>任务日志</span></div>
-          <div class="hk"><kbd>ESC</kbd><span>关闭面板</span></div>
+          <div class="hk"><span class="keys"><kbd>←</kbd><kbd>→</kbd></span><span>左右移动</span></div>
+          <div class="hk"><span class="keys"><kbd>↑</kbd><kbd>↓</kbd></span><span>攀爬绳索，调整射角</span></div>
+          <div class="hk"><span class="keys"><kbd>空格</kbd></span><span>跳跃，↓ + 空格 跳下平台</span></div>
+          <div class="hk"><span class="keys"><kbd>Z</kbd><kbd>左键</kbd></span><span>普通射击（可按住连射）</span></div>
+          <div class="hk"><span class="keys"><kbd>鼠标</kbd></span><span>自由瞄准</span></div>
+          <div class="hk"><span class="keys"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd></span><span>四个技能（Q E R F）</span></div>
+          <div class="hk"><span class="keys"><kbd>5</kbd><kbd>6</kbd></span><span>红药 / 蓝药（V B）</span></div>
+          <div class="hk"><span class="keys"><kbd>I</kbd><kbd>C</kbd><kbd>T</kbd><kbd>H</kbd></span><span>背包 / 属性 / 任务 / 帮助</span></div>
+          <div class="hk"><span class="keys"><kbd>ESC</kbd></span><span>关闭面板</span></div>
         </div>
         <div class="help-tips">
           <p>· 弓箭手是远程职业，保持距离、利用高台与绳索风筝怪物是核心思路。</p>

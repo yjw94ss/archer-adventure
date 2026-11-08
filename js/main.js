@@ -230,6 +230,19 @@ class Game {
         case 'Digit1':
           if (!e.repeat) this.castSkill('triple');
           break;
+        // 左手也能放技能：Q / E / R / F，右手不必离开鼠标
+        case 'KeyQ':
+          if (!e.repeat) this.castSkill('triple');
+          break;
+        case 'KeyE':
+          if (!e.repeat) this.castSkill('pierce');
+          break;
+        case 'KeyR':
+          if (!e.repeat) this.castSkill('rain');
+          break;
+        case 'KeyF':
+          if (!e.repeat) this.castSkill('eyes');
+          break;
         case 'Digit2':
           if (!e.repeat) this.castSkill('pierce');
           break;
@@ -243,6 +256,12 @@ class Game {
           if (!e.repeat) this.usePotion('hp_potion');
           break;
         case 'Digit6':
+          if (!e.repeat) this.usePotion('mp_potion');
+          break;
+        case 'KeyV':
+          if (!e.repeat) this.usePotion('hp_potion');
+          break;
+        case 'KeyB':
           if (!e.repeat) this.usePotion('mp_potion');
           break;
         case 'KeyI':
@@ -390,12 +409,12 @@ class Game {
       knob.style.transform = `translate(${(nx * cl).toFixed(1)}px, ${(ny * cl).toFixed(1)}px)`;
       const mx = (nx * cl) / R;
       const my = (ny * cl) / R;
-      const dead = 0.24;
+      const dead = 0.14;
       const wasUp = inp.up;
       inp.left = mx < -dead;
       inp.right = mx > dead;
-      inp.up = my < -0.42;
-      inp.down = my > 0.42;
+      inp.up = my < -0.36;
+      inp.down = my > 0.36;
       if ((inp.up || inp.down) && Math.abs(my) > dead) inp.aimMode = 'key';
       if (inp.up && !wasUp) inp.upPressed = true;
       stick.classList.toggle('on', cl > R * 0.16);
@@ -457,6 +476,8 @@ class Game {
       () => {
         this.mouseHeld = true;
         this.input.attack = true;
+        // 按下即出手，不等到下一帧，手感更跟手
+        if (this.started) this.tryBasicAttack();
         Sound.ui();
       },
       () => {
@@ -926,6 +947,12 @@ class Game {
       return;
     }
 
+    /* ---- 打开面板时世界暂停，避免翻背包被怪物偷袭 ---- */
+    if (this.ui.activePanel) {
+      this.ui.update(dt);
+      return;
+    }
+
     // 鼠标世界坐标（跟随相机）
     this.input.mouseWorldX = this.input.mouseScreenX + this.camera.x;
     this.input.mouseWorldY = this.input.mouseScreenY + this.camera.y;
@@ -1031,9 +1058,9 @@ class Game {
       if (this.texts[i].dead) this.texts.splice(i, 1);
     }
 
-    // 相机
+    // 相机：按移动速度前探，跑得越快看得越远
     const cam = this.camera;
-    const targetX = clamp(p.x - VIEW_W / 2 + p.facing * 30, 0, WORLD_W - VIEW_W);
+    const targetX = clamp(p.x - VIEW_W / 2 + clamp(p.vx * 0.2, -46, 46), 0, WORLD_W - VIEW_W);
     const targetY = clamp(p.y - VIEW_H * 0.62, 0, WORLD_H - VIEW_H);
     const k = 1 - Math.pow(0.0001, dt);
     cam.x = lerp(cam.x, targetX, k * 0.85);
@@ -1142,7 +1169,106 @@ class Game {
     this.particles.forEach((p) => p.render(ctx));
     this.texts.forEach((t) => t.render(ctx));
 
+    // 触屏锁定标记
+    this.drawLockOn(ctx);
+
     ctx.restore();
+
+    // 桌面准星（屏幕坐标，不随相机移动）
+    const cross = this.drawCrosshair(ctx);
+    if (cross !== this._crossState) {
+      this._crossState = cross;
+      document.body.classList.toggle('aim-cursor', cross);
+    }
+  }
+
+  /* ---------- 触屏：锁定目标标记 ---------- */
+  drawLockOn(ctx) {
+    const t = this.assistTarget;
+    if (!t || t.dead) return;
+    const cx = t.x;
+    const cy = t.y - t.h * 0.6;
+    const base = Math.max(t.w, t.h) * 0.52 + 12;
+    const r = base + Math.sin(this.time * 7) * 2;
+    const a = 0.5 + Math.sin(this.time * 7) * 0.16;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(this.time * 0.8);
+    ctx.strokeStyle = `rgba(255, 214, 120, ${a})`;
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 4; i++) {
+      const ang = (Math.PI / 2) * i;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, ang - 0.22, ang + 0.22);
+      ctx.stroke();
+    }
+    ctx.restore();
+    // 中心小十字
+    ctx.save();
+    ctx.strokeStyle = `rgba(255, 240, 200, ${a + 0.2})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(cx - 4, cy);
+    ctx.lineTo(cx + 4, cy);
+    ctx.moveTo(cx, cy - 4);
+    ctx.lineTo(cx, cy + 4);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* ---------- 桌面：自定义准星 ---------- */
+  drawCrosshair(ctx) {
+    if (this.touchMode) return false;
+    const inp = this.input;
+    if (!inp.mouseActive || inp.aimMode !== 'mouse') return false;
+    const x = inp.mouseScreenX;
+    const y = inp.mouseScreenY;
+    if (x < 0 || y < 0 || x > VIEW_W || y > VIEW_H) return false;
+
+    let hot = false;
+    for (const m of this.monsters) {
+      if (m.dead) continue;
+      const mx = m.x - this.camera.x;
+      const my = m.y - m.h * 0.6 - this.camera.y;
+      if (Math.hypot(mx - x, my - y) < Math.max(m.w, m.h) * 0.62 + 10) {
+        hot = true;
+        break;
+      }
+    }
+
+    ctx.save();
+    ctx.translate(x, y);
+    // 暗色描边打底，保证任何背景下都清晰
+    ctx.strokeStyle = 'rgba(12, 20, 30, 0.55)';
+    ctx.lineWidth = 3.4;
+    ctx.beginPath();
+    ctx.arc(0, 0, 11, 0, Math.PI * 2);
+    ctx.stroke();
+    // 主环
+    ctx.strokeStyle = hot ? 'rgba(255, 208, 110, 0.95)' : 'rgba(255, 255, 255, 0.9)';
+    ctx.lineWidth = 1.7;
+    ctx.beginPath();
+    ctx.arc(0, 0, 11, 0, Math.PI * 2);
+    ctx.stroke();
+    // 四向短线
+    ctx.lineWidth = 1.9;
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const ang = (Math.PI / 2) * i;
+      const c = Math.cos(ang);
+      const s = Math.sin(ang);
+      ctx.moveTo(c * 14, s * 14);
+      ctx.lineTo(c * 20, s * 20);
+    }
+    ctx.stroke();
+    // 中心点
+    ctx.fillStyle = hot ? '#ffd166' : 'rgba(255, 255, 255, 0.95)';
+    ctx.beginPath();
+    ctx.arc(0, 0, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    return true;
   }
 
   drawAimGuide(ctx) {
@@ -1560,16 +1686,18 @@ if (__test) {
           if (target) {
             inp.left = target.x < p.x - 50;
             inp.right = target.x > p.x + 50;
-            inp.jump = false;
             inp.aimMode = 'mouse';
             inp.mouseActive = true;
+            // 注意：update 会用 mouseScreen + camera 重算世界坐标，所以这里给屏幕坐标
+            inp.mouseScreenX = target.x - game.camera.x;
+            inp.mouseScreenY = target.y - target.h * 0.7 - game.camera.y;
             inp.mouseWorldX = target.x;
             inp.mouseWorldY = target.y - target.h * 0.7;
             inp.attack = true;
-            if (bd < 150 && i % 90 === 0) {
-              inp.jumpPressed = true;
-              inp.jump = true;
-            }
+            // 模拟真实按键：每 1.5 秒起跳一次，并按住约 0.17 秒（可变跳跃高度）
+            const jumpPhase = i % 90;
+            inp.jump = bd < 150 && jumpPhase < 10;
+            if (bd < 150 && jumpPhase === 0) inp.jumpPressed = true;
           } else {
             inp.attack = false;
           }
@@ -1584,7 +1712,7 @@ if (__test) {
           window.__sim.dead = p.dead;
         }
         dbg.textContent =
-          `SIM sec=${sec} kills=${p.kills} lv=${p.level} exp=${p.exp} gold=${p.gold} ` +
+          `SIM sec=${sec} steps=${steps} kills=${p.kills} lv=${p.level} exp=${p.exp} gold=${p.gold} ` +
           `inv=${p.inventory.length} lootSeen=${window.__sim.loot} quest1=${window.__sim.q1} ` +
           `hp=${p.hp.toFixed(0)}/${p.maxHp} mp=${p.mp.toFixed(0)} dead=${p.dead} x=${p.x.toFixed(0)} y=${p.y.toFixed(0)} climb=${p.climbing} onGround=${p.onGround} vw=${innerWidth}x${innerHeight} sc=${game.stageScale.toFixed(3)} sw=${document.getElementById('stage').getBoundingClientRect().width.toFixed(0)}`;
         const out = document.createElement('div');
@@ -1605,6 +1733,103 @@ if (__test) {
           out.textContent = dbg.textContent;
         }
         document.body.appendChild(out);
+      } else if (__test === 'feel') {
+        /* 手感回归：长/短跳、落地缓冲、面板暂停、按住射击时不抢绳 */
+        const out = [];
+        const step = (n) => {
+          for (let i = 0; i < n; i++) game.update(1 / 60);
+        };
+        const reset = () => {
+          p.x = 600;
+          p.y = 1240;
+          p.vx = 0;
+          p.vy = 0;
+          p.climbing = false;
+          p.climbNode = null;
+          inp.left = inp.right = inp.up = inp.down = inp.attack = false;
+          inp.jump = false;
+          step(8);
+        };
+
+        // 长按跳：按住整整 1 秒
+        reset();
+        const base = p.y;
+        inp.jumpPressed = true;
+        inp.jump = true;
+        let top = p.y;
+        for (let i = 0; i < 60; i++) {
+          game.update(1 / 60);
+          top = Math.min(top, p.y);
+        }
+        out.push(`hold=${(base - top).toFixed(0)}`);
+
+        // 短按跳：约 5 帧（80ms）后松手
+        reset();
+        const base2 = p.y;
+        inp.jumpPressed = true;
+        inp.jump = true;
+        step(5);
+        inp.jump = false;
+        let top2 = p.y;
+        for (let i = 0; i < 45; i++) {
+          game.update(1 / 60);
+          top2 = Math.min(top2, p.y);
+        }
+        out.push(`tap=${(base2 - top2).toFixed(0)}`);
+
+        // 落地前提前按跳：应该被缓冲，落地后立即起跳
+        reset();
+        p.y = 1130;
+        p.vy = 0;
+        step(10); // 自由落体，onGround 已变为 false，土狼时间耗尽
+        const airborne = !p.onGround && p.y < 1230;
+        inp.jumpPressed = true;
+        inp.jump = true;
+        step(1);
+        out.push(`air=${airborne}&buf=${p.jumpBuf.toFixed(2)}`);
+        step(20);
+        out.push(`lateJump=${p.vy < -300}`);
+
+        // 面板打开时世界暂停
+        reset();
+        const mon = game.monsters.find((m) => !m.dead);
+        const mx0 = mon ? mon.x : 0;
+        const hp0 = p.hp;
+        game.ui.togglePanel('inventory');
+        step(90);
+        out.push(`paused=${mon ? Math.abs(mon.x - mx0) < 0.01 : 'n/a'}&hpSame=${p.hp === hp0}`);
+        game.ui.closePanels();
+
+        // 桌面：按住射击 + ↑ 只调射角，不抢绳；松开射击才抓
+        reset();
+        const node = MAP.climbables[0];
+        if (node) {
+          p.x = node.x;
+          p.y = (node.y1 + node.y2) / 2;
+          p.vy = 0;
+          inp.attack = true;
+          inp.up = true;
+          inp.upPressed = true;
+          step(3);
+          out.push(`grabShooting=${p.climbing}`);
+          inp.attack = false;
+          step(6);
+          out.push(`grabIdle=${p.climbing}`);
+          inp.up = false;
+          p.climbing = false;
+        } else {
+          out.push('no-rope');
+        }
+
+        // 受击硬直时长
+        reset();
+        p.takeDamage(5, p.x + 50);
+        out.push(`hurtLock=${p.hurtLock.toFixed(2)}`);
+
+        const o = document.createElement('div');
+        o.id = 'simout';
+        o.textContent = 'FEEL ' + out.join(' | ');
+        document.body.appendChild(o);
       }
     }, 80)
   );

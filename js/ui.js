@@ -256,7 +256,7 @@ class UI {
     this.game = game;
     this.el = {};
     const ids = [
-      'hp-fill', 'hp-text', 'mp-fill', 'mp-text', 'exp-fill', 'exp-text', 'lv-badge', 'char-name',
+      'hp-fill', 'hp-text', 'mp-fill', 'mp-text', 'exp-fill', 'exp-text', 'exp-num', 'lv-badge', 'char-name',
       'mini-atk', 'mini-crit', 'mini-def', 'mini-gold', 'minimap-canvas', 'quest-tracker', 'quick-bar', 'log-box',
       'toast-wrap', 'boss-bar', 'boss-name', 'boss-lv', 'boss-hp-fill', 'boss-hp-text', 'inv-grid',
       'inv-meso', 'inv-slots', 'equip-slots', 'equip-summary', 'combat-summary', 'stat-list', 'ap-left', 'stat-level',
@@ -287,7 +287,7 @@ class UI {
     const wrap = this.el['quick-bar'];
     let html = '';
     SKILLS.forEach((s) => {
-      html += `<div class="slot" data-skill="${s.id}">
+      html += `<div class="slot" data-skill="${s.id}" style="--tint:${s.tint}">
         <div class="icon">${Art.skillIcon(s.icon)}</div>
         <div class="mp-warn"></div>
         <div class="cd-mask"></div>
@@ -600,7 +600,8 @@ class UI {
     const need = expNeed(p.level);
     const expPct = clamp((p.exp / need) * 100, 0, 100);
     this.el['exp-fill'].style.width = expPct + '%';
-    this.el['exp-text'].textContent = `EXP ${expPct.toFixed(1)}%  (${Math.floor(p.exp)} / ${need})`;
+    this.el['exp-text'].textContent = `EXP ${expPct.toFixed(1)}%`;
+    if (this.el['exp-num']) this.el['exp-num'].textContent = `${Math.floor(p.exp)} / ${need}`;
 
     this.el['char-name'].textContent = `Lv.${p.level} 弓箭手`;
     this.el['lv-badge'].textContent = p.level;

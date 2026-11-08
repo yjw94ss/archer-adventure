@@ -512,3 +512,60 @@ body.is-touch.is-portrait #rotate-hint:not(.skip) { display: flex; }
   box-shadow: 0 4px 0 #b2761a, 0 8px 18px rgba(180, 120, 20, 0.4);
 }
 #rotate-hint button:active { transform: translateY(2px); box-shadow: 0 2px 0 #b2761a; }
+
+/* ---------- 手感微调：跳跃键错位摆放，避免与射击键误触 ---------- */
+.ta-main { position: relative; }
+.t-btn.jump {
+  width: 62px;
+  height: 62px;
+  transform: translate(-6px, -30px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.42), inset 0 -4px 9px rgba(10, 50, 80, 0.3), inset 0 2px 0 rgba(255, 255, 255, 0.4);
+}
+.t-btn.jump.on,
+.t-btn.jump:active {
+  transform: translate(-6px, -30px) scale(0.94);
+}
+/* 技能键略放大，拇指更容易命中 */
+.t-skill {
+  width: 52px;
+  height: 46px;
+}
+
+/* ---------- 底部动作区重排：药水横排、跳跃略高、摇杆收小 ---------- */
+#t-actions { gap: 16px; }
+.ta-main { align-items: flex-end; gap: 10px; }
+.ta-potion {
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.t-pt {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 10.5px;
+  line-height: 1.1;
+}
+.t-pt i { font-size: 8.5px; }
+.t-btn.jump {
+  transform: none;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 20px;
+}
+.t-btn.jump.on,
+.t-btn.jump:active {
+  transform: scale(0.94);
+}
+#t-stick {
+  left: calc(16px * var(--inv));
+  bottom: calc(16px * var(--inv));
+  width: 118px;
+  height: 118px;
+}
+.ts-knob {
+  width: 52px;
+  height: 52px;
+  margin: -26px 0 0 -26px;
+}

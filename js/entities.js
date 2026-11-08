@@ -53,6 +53,13 @@ class Player {
     this.recoil = 0;
     this.invuln = 0;
     this.buffTime = 0;
+    /* 手感辅助状态 */
+    this.coyote = 0; // 离开平台后的宽容起跳时间
+    this.jumpBuf = 0; // 落地前提前按跳的缓冲
+    this.jumpCut = false; // 本次跳跃是否已松开截断
+    this.squash = 0; // 落地压扁（0~0.5）
+    this.hurtLock = 0; // 受击硬直
+    this.dustT = 0; // 跑动扬尘节流
     this.dead = false;
     this.deadTimer = 0;
     this.animTime = 0;
@@ -117,7 +124,8 @@ class Player {
   }
 
   get attackInterval() {
-    return Math.max(0.2, 0.38 - this.dex * 0.003 - this.level * 0.004);
+    // 连射更利落：随 DEX / 等级成长
+    return Math.max(0.16, 0.32 - this.dex * 0.0035 - this.level * 0.004);
   }
 
   /* ---------- 背包 ---------- */
@@ -242,8 +250,9 @@ class Player {
     this.invuln = 0.9;
     this.hurtFlash = 0.35;
     this.climbing = false;
-    this.vx = (this.x < fromX ? -1 : 1) * 240;
-    this.vy = -320;
+    this.vx = (this.x < fromX ? -1 : 1) * 190;
+    this.vy = -255;
+    this.hurtLock = 0.09;
     this.game.texts.push(new FloatText(this.x, this.y - 74, '-' + dmg, '#ff6b6b', 26, -65, true));
     this.game.particles.push(new Particle(this.x, this.y - 40, 0, 0, 0.4, 'rgba(255,90,90,0.5)', 26, 0, true));
     this.game.shake(6);
@@ -266,6 +275,8 @@ class Player {
     this.buffTime = Math.max(0, this.buffTime - dt);
     this.dropTimer = Math.max(0, this.dropTimer - dt);
     this.hurtFlash = Math.max(0, this.hurtFlash - dt);
+    this.hurtLock = Math.max(0, this.hurtLock - dt);
+    this.squash = Math.max(0, this.squash - dt * 2.8);
     if (this.comboTimer > 0) {
       this.comboTimer -= dt;
       if (this.comboTimer <= 0) this.combo = 0;
@@ -279,29 +290,39 @@ class Player {
       return;
     }
 
-    // 瞄准
+    /* ---- 瞄准 ---- */
+    let aimTarget;
     if (game.assistAngle != null) {
-      // 触屏自动瞄准：锁定最近的敌人
-      this.aimAngle = game.assistAngle;
+      aimTarget = game.assistAngle;
       this.aimMode = 'assist';
     } else if (inp.aimMode === 'mouse' && inp.mouseActive) {
-      const bx = this.x;
-      const by = this.y - 44;
-      this.aimAngle = Math.atan2(inp.mouseWorldY - by, inp.mouseWorldX - bx);
+      aimTarget = Math.atan2(inp.mouseWorldY - (this.y - 44), inp.mouseWorldX - this.x);
       this.aimMode = 'mouse';
     } else {
       this.aimMode = 'key';
       const horizontal = inp.left || inp.right;
       if (inp.up && !inp.down) {
-        this.aimAngle = horizontal ? (this.facing > 0 ? -Math.PI / 4 : (-3 * Math.PI) / 4) : -Math.PI / 2;
+        aimTarget = horizontal ? (this.facing > 0 ? -Math.PI / 4 : (-3 * Math.PI) / 4) : -Math.PI / 2;
       } else if (inp.down && !inp.up) {
-        this.aimAngle = horizontal ? (this.facing > 0 ? Math.PI / 4 : (3 * Math.PI) / 4) : Math.PI / 2;
+        aimTarget = horizontal ? (this.facing > 0 ? Math.PI / 4 : (3 * Math.PI) / 4) : Math.PI / 2;
       } else {
-        this.aimAngle = this.facing > 0 ? 0 : Math.PI;
+        aimTarget = this.facing > 0 ? 0 : Math.PI;
       }
     }
-    if (Math.abs(Math.cos(this.aimAngle)) > 0.15) {
-      this.facing = Math.cos(this.aimAngle) > 0 ? 1 : -1;
+
+    if (this.aimMode === 'key') {
+      // 八方向瞄准要求精确，直接对齐
+      this.aimAngle = aimTarget;
+    } else {
+      // 鼠标 / 自动瞄准走角度插值，避免准星抖动与手臂瞬移
+      let d = aimTarget - this.aimAngle;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      const k = this.aimMode === 'assist' ? 1 - Math.pow(0.00002, dt) : 1 - Math.pow(0.000005, dt);
+      this.aimAngle += d * k;
+    }
+    if (Math.abs(Math.cos(aimTarget)) > 0.2) {
+      this.facing = Math.cos(aimTarget) > 0 ? 1 : -1;
     }
 
     /* ---- 攀爬 ---- */
@@ -336,7 +357,9 @@ class Player {
     }
 
     /* ---- 抓绳子 ---- */
-    if (inp.up || (!this.onGround && inp.down)) {
+    // 桌面上按住射击 + ↑ 只调整射角，不抢绳子；触屏摇杆上推仍可攀爬
+    const wantGrab = inp.up || (!this.onGround && inp.down);
+    if (wantGrab && !(inp.attack && !game.touchMode)) {
       for (const node of MAP.climbables) {
         if (Math.abs(this.x - node.x) > 20) continue;
         if (this.y < node.y1 - 6 || this.y > node.y2 + 6) continue;
@@ -353,42 +376,72 @@ class Player {
 
     /* ---- 左右移动 ---- */
     const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
-    const maxSpeed = 320;
-    const accel = this.onGround ? 2600 : 1500;
-    if (dir !== 0) {
+    const maxSpeed = 335;
+    const accel = this.onGround ? 3000 : 1800;
+    if (this.hurtLock > 0) {
+      // 受击硬直：保留击退位移，短暂不响应转向，避免被弹开又被拉回
+      this.vx = clamp(this.vx, -maxSpeed, maxSpeed);
+    } else if (dir !== 0) {
       this.vx += dir * accel * dt;
       this.vx = clamp(this.vx, -maxSpeed, maxSpeed);
-      if (Math.abs(this.aimAngle) < Math.PI / 2 - 0.2 || Math.abs(this.aimAngle) > Math.PI / 2 + 0.2) {
-        // 仅在键盘瞄准模式下强制转向（鼠标/自动瞄准由射角决定朝向）
-        if (inp.aimMode === 'key') this.facing = dir;
-      }
+      // 键盘瞄准时朝向跟随移动；鼠标/自动瞄准下，只有不射击时才把身体转向移动方向
+      if (inp.aimMode === 'key') this.facing = dir;
+      else if (!inp.attack) this.facing = dir;
     } else {
-      const fr = (this.onGround ? 2400 : 700) * dt;
+      const fr = (this.onGround ? 3200 : 520) * dt;
       if (Math.abs(this.vx) <= fr) this.vx = 0;
       else this.vx -= Math.sign(this.vx) * fr;
     }
 
-    /* ---- 跳跃 ---- */
-    if (inp.jumpPressed && this.onGround) {
+    // 跑动扬尘
+    this.dustT -= dt;
+    if (this.onGround && Math.abs(this.vx) > 210 && this.dustT <= 0 && this.hurtLock <= 0) {
+      this.dustT = 0.17;
+      this.game.particles.push(
+        new Particle(this.x - Math.sign(this.vx) * 8, this.y - 2, -this.vx * 0.12, rand(-26, -8), 0.32, 'rgba(233,222,190,0.5)', 5, -60)
+      );
+    }
+
+    /* ---- 跳跃：土狼时间 + 输入缓冲 + 可变高度 ---- */
+    this.coyote = this.onGround ? 0.1 : Math.max(0, this.coyote - dt);
+    this.jumpBuf = inp.jumpPressed ? 0.2 : Math.max(0, this.jumpBuf - dt);
+    if (this.jumpBuf > 0 && this.coyote > 0) {
       const plat = this.groundPlatform;
+      this.jumpBuf = 0;
+      this.coyote = 0;
       if (inp.down && plat && !plat.ground) {
         this.dropTimer = 0.2;
         this.onGround = false;
         this.vy = 90;
       } else {
-        this.vy = -790;
+        this.vy = -775;
+        this.jumpCut = false;
         this.onGround = false;
-        this.game.particles.push(new Particle(this.x, this.y, rand(-60, 60), -30, 0.35, 'rgba(255,255,255,0.55)', 10, -200));
+        for (let i = 0; i < 3; i++) {
+          this.game.particles.push(
+            new Particle(this.x + rand(-8, 8), this.y, rand(-80, 80), rand(-40, -5), 0.32, 'rgba(255,255,255,0.5)', 8, -220)
+          );
+        }
       }
+    }
+
+    // 松开跳跃键提前收力：短按小跳、长按跳高
+    if (!inp.jump && !this.jumpCut && this.vy < -190) {
+      this.vy *= 0.55;
+      this.jumpCut = true;
     }
 
     /* ---- 重力 ---- */
     const rising = this.vy < 0 && inp.jump;
-    this.vy += GRAVITY * (rising ? 0.62 : 1) * dt;
-    this.vy = Math.min(this.vy, 1500);
+    let gMul = rising ? 0.6 : 1;
+    if (!this.onGround && Math.abs(this.vy) < 175) gMul *= 0.74; // 顶点短暂悬浮，滞空更好读
+    this.vy += GRAVITY * gMul * dt;
+    this.vy = Math.min(this.vy, 1350);
 
     /* ---- 位移与碰撞 ---- */
     const prevBottom = this.y;
+    const wasGround = this.onGround;
+    const fallVy = this.vy;
     this.x = clamp(this.x + this.vx * dt, 24, WORLD_W - 24);
     this.y += this.vy * dt;
 
@@ -410,6 +463,42 @@ class Player {
       this.y = WORLD_H - 10;
       this.vy = 0;
       this.onGround = true;
+    }
+
+    // 落地反馈：压扁 + 扬尘
+    if (this.onGround && !wasGround && fallVy > 240) {
+      this.squash = clamp(fallVy / 1600, 0.1, 0.46);
+      for (let i = 0; i < 5; i++) {
+        this.game.particles.push(
+          new Particle(
+            this.x + rand(-12, 12),
+            this.y - 2,
+            rand(-120, 120),
+            rand(-55, -10),
+            0.34,
+            'rgba(240,232,208,0.55)',
+            rand(4, 8),
+            -120
+          )
+        );
+      }
+      if (fallVy > 900) this.game.shake(2.4);
+    }
+
+    // 落地瞬间让提前按下的跳跃立即生效（否则缓冲会白按）
+    if (this.onGround && this.jumpBuf > 0 && !inp.down) {
+      this.jumpBuf = 0;
+      this.coyote = 0;
+      this.vy = -775;
+      this.jumpCut = false;
+      this.squash = 0;
+      this.onGround = false;
+      this.groundPlatform = null;
+      for (let i = 0; i < 3; i++) {
+        this.game.particles.push(
+          new Particle(this.x + rand(-8, 8), this.y, rand(-70, 70), rand(-40, -5), 0.3, 'rgba(255,255,255,0.45)', 7, -200)
+        );
+      }
     }
 
     if (inp.attack) game.tryBasicAttack();
@@ -455,6 +544,10 @@ class Player {
 
     ctx.save();
     ctx.translate(this.x, this.y - bob);
+    if (this.squash > 0.002 && !this.dead) {
+      // 落地瞬间的挤压感（以脚底为支点）
+      ctx.scale(1 + this.squash * 0.55, 1 - this.squash * 0.62);
+    }
     if (this.dead) ctx.rotate(this.facing * 1.3);
     if (this.invuln > 0 && !this.dead && Math.floor(this.invuln * 16) % 2 === 0) ctx.globalAlpha = 0.4;
 

@@ -1,0 +1,671 @@
+/* ============================================================
+   枫之谷 · 弓箭手传说 —— UI 质感升级层
+   只做视觉（描边 / 光泽 / 层次 / 动效），不改布局尺寸，
+   保证 mobile.css 的触屏布局仍然生效。
+   ============================================================ */
+
+:root {
+  --gold: #f0c469;
+  --gold-d: #b3812c;
+  --ink: #1b3552;
+}
+
+/* ---------- 画面暗角，让手绘背景更有纵深 ---------- */
+#stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  border-radius: 12px;
+  box-shadow: inset 0 0 70px rgba(6, 14, 24, 0.32), inset 0 -60px 90px rgba(6, 14, 24, 0.22);
+}
+
+/* ============================================================
+   左上 角色状态面板
+   ============================================================ */
+.status-plate {
+  position: relative;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(238, 246, 255, 0.95) 55%, rgba(214, 231, 246, 0.95) 100%);
+  border: 2px solid #fff;
+  box-shadow: 0 10px 26px rgba(5, 24, 40, 0.38), 0 0 0 1px rgba(38, 68, 100, 0.5), 0 0 0 3px rgba(240, 196, 105, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.status-plate::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 6px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95) 22%, rgba(255, 255, 255, 0.95) 78%, transparent);
+  pointer-events: none;
+}
+
+.portrait {
+  background: radial-gradient(circle at 50% 26%, #d9f1ff, #96cfe9 58%, #69a8c9 100%);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(58, 96, 130, 0.55), 0 0 0 3px rgba(240, 196, 105, 0.35), 0 3px 7px rgba(0, 0, 0, 0.22),
+    inset 0 0 12px rgba(255, 255, 255, 0.5);
+}
+.lv-badge {
+  background: linear-gradient(180deg, #fff0b4, #f5b83c 55%, #d18a17);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-variant-numeric: tabular-nums;
+}
+.char-name {
+  color: #17395b;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+.channel {
+  background: linear-gradient(180deg, #86b1d6, #4a7cab 60%, #39628b);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 1px 2px rgba(0, 0, 0, 0.25);
+  letter-spacing: 0.6px;
+}
+
+/* ---------- 血条 / 蓝条 / 经验条：内嵌刻度 + 流动光泽 ---------- */
+.bar,
+.exp-bar,
+.boss-hp {
+  border-color: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.32), 0 0 0 1px rgba(40, 60, 82, 0.55), inset 0 2px 5px rgba(0, 0, 0, 0.55);
+}
+.bar .fill,
+.exp-bar .fill,
+.boss-hp .fill {
+  overflow: hidden;
+}
+.bar .fill::after,
+.exp-bar .fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(100deg, transparent 34%, rgba(255, 255, 255, 0.42) 48%, transparent 60%);
+  background-size: 240% 100%;
+  background-position: 120% 0;
+  animation: barFlow 3.6s linear infinite;
+  pointer-events: none;
+}
+@keyframes barFlow {
+  from { background-position: 130% 0; }
+  to { background-position: -60% 0; }
+}
+.bar::after,
+.exp-bar::after,
+.boss-hp::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: repeating-linear-gradient(90deg, transparent 0 12px, rgba(0, 0, 0, 0.1) 12px 13px);
+  opacity: 0.45;
+}
+.exp-bar .fill {
+  background: linear-gradient(180deg, #fbffb8, #97e956 42%, #4cae1e 100%);
+}
+/* 经验条左右分栏：左边百分比、右边具体数值，避免长文本挤压 */
+.exp-bar .exp-l,
+.exp-bar .exp-r {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.4px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+  font-variant-numeric: tabular-nums;
+}
+.exp-bar .exp-l { left: 7px; right: auto; }
+.exp-bar .exp-r { right: 7px; left: auto; opacity: 0.92; }
+.bar .num,
+.exp-bar span {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 0 4px rgba(0, 0, 0, 0.55);
+}
+.mini-stats {
+  color: #40607f;
+}
+.mini-stats b {
+  color: #113a5f;
+}
+
+/* ============================================================
+   右上 小地图 / 任务追踪
+   ============================================================ */
+.map-panel,
+.quest-track {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(226, 239, 250, 0.95));
+  border: 2px solid #fff;
+  box-shadow: 0 9px 24px rgba(5, 24, 40, 0.34), 0 0 0 1px rgba(38, 68, 100, 0.46), 0 0 0 3px rgba(240, 196, 105, 0.16);
+}
+.map-head {
+  position: relative;
+  background: linear-gradient(180deg, #5b8cb8 0%, #33628c 52%, #274c6e 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.map-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255, 200, 110, 0), rgba(255, 214, 140, 0.7) 25%, rgba(255, 236, 190, 0.95) 50%, rgba(255, 214, 140, 0.7) 75%, rgba(255, 200, 110, 0));
+}
+.map-head .dot {
+  box-shadow: 0 0 7px #8dffb0, 0 0 0 2px rgba(141, 255, 176, 0.22);
+}
+.map-ch {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+#minimap-canvas {
+  box-shadow: inset 0 0 0 1px rgba(70, 96, 116, 0.5), inset 0 0 20px rgba(44, 60, 74, 0.26), 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+.quest-track {
+  position: relative;
+  overflow: hidden;
+}
+.quest-track::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, #ffd98a, #e09a24);
+  opacity: 0.9;
+}
+.qt-head {
+  color: #2a557d;
+  letter-spacing: 0.8px;
+}
+
+/* ============================================================
+   BOSS 血条
+   ============================================================ */
+.boss-hp {
+  border: 2px solid #f0dfb6;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(70, 30, 12, 0.9), 0 0 18px rgba(255, 150, 60, 0.18),
+    inset 0 2px 6px rgba(0, 0, 0, 0.72);
+}
+.boss-hp .fill {
+  background: linear-gradient(180deg, #ffb0a0 0%, #ef4436 40%, #9b1008 100%);
+}
+.boss-hp .fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 55%);
+  pointer-events: none;
+}
+
+/* ============================================================
+   底部 技能栏 / 菜单
+   ============================================================ */
+.quick-bar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(223, 236, 249, 0.94));
+  border: 2px solid #fff;
+  box-shadow: 0 12px 30px rgba(5, 24, 40, 0.44), 0 0 0 1px rgba(38, 68, 100, 0.42), 0 0 0 3px rgba(240, 196, 105, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.slot {
+  border: 2px solid #f2d79e;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 0 0 1px rgba(6, 16, 28, 0.5), 0 3px 7px rgba(0, 0, 0, 0.35);
+  transition: transform 0.11s, border-color 0.11s, box-shadow 0.11s, filter 0.11s;
+}
+.slot:hover {
+  transform: translateY(-3px);
+  border-color: #ffe3a4;
+  filter: brightness(1.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 6px 14px rgba(0, 0, 0, 0.42), 0 0 0 2px rgba(255, 214, 130, 0.35);
+}
+.slot:active {
+  transform: translateY(0) scale(0.97);
+}
+.slot .key {
+  background: rgba(6, 16, 28, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+.slot.potion-hp,
+.slot.potion-mp {
+  border-color: #f2d79e;
+}
+
+.menu-btn {
+  border: 2px solid #fff;
+  background: linear-gradient(180deg, #ffffff, #e2eefb 70%, #d3e4f4);
+  box-shadow: 0 3px 0 #a2b8cc, 0 6px 14px rgba(5, 24, 40, 0.32), inset 0 1px 0 #fff;
+  transition: transform 0.09s, box-shadow 0.09s, filter 0.12s;
+}
+.menu-btn:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, #ffffff, #fff3da 70%, #ffe6b4);
+  box-shadow: 0 4px 0 #a2b8cc, 0 9px 18px rgba(5, 24, 40, 0.34), inset 0 1px 0 #fff;
+}
+.menu-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #a2b8cc, 0 3px 8px rgba(5, 24, 40, 0.3), inset 0 1px 0 #fff;
+}
+.menu-btn .mb-ico {
+  color: #d98b1c;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.quick-hint {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85), 0 0 10px rgba(0, 0, 0, 0.45);
+}
+
+/* ============================================================
+   弹出面板
+   ============================================================ */
+.panel {
+  position: absolute;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f9ff 42%, #dfebf7 100%);
+  border: 3px solid #fff;
+  box-shadow: 0 30px 80px rgba(2, 12, 22, 0.62), 0 0 0 2px rgba(38, 68, 100, 0.6), 0 0 0 5px rgba(240, 196, 105, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  z-index: 3;
+  border: 1px solid rgba(202, 168, 108, 0.4);
+  border-radius: 11px;
+  pointer-events: none;
+}
+.panel:not([hidden]) {
+  animation: panelIn 0.17s cubic-bezier(0.2, 0.9, 0.3, 1.04);
+}
+@keyframes panelIn {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.965); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.panel-head {
+  background: linear-gradient(180deg, #5c8ebc 0%, #35638e 50%, #274c6d 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38), inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+.panel-head::before {
+  width: 4px;
+  background: linear-gradient(180deg, #ffe6a8, #f0b445 45%, #c98a1d);
+  box-shadow: 0 0 10px rgba(255, 190, 90, 0.55);
+}
+.panel-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255, 200, 110, 0), rgba(255, 214, 140, 0.75) 22%, rgba(255, 240, 200, 1) 50%, rgba(255, 214, 140, 0.75) 78%, rgba(255, 200, 110, 0));
+  pointer-events: none;
+}
+.panel-title {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 12px rgba(140, 200, 255, 0.25);
+}
+.panel-body {
+  background-image: repeating-linear-gradient(45deg, rgba(88, 122, 154, 0.028) 0 2px, transparent 2px 6px);
+}
+.close-btn {
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f59379 0%, #d64f36 55%, #b2361f 100%);
+  box-shadow: 0 2px 0 #8d2a17, 0 4px 9px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: transform 0.09s, box-shadow 0.09s, filter 0.12s;
+}
+.close-btn:hover {
+  filter: brightness(1.09);
+  transform: translateY(-1px);
+}
+.close-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 #8d2a17, inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.tab {
+  background: linear-gradient(180deg, #f9fcff, #dce9f6);
+  border-color: #b6cee4;
+  box-shadow: inset 0 1px 0 #fff;
+  transition: color 0.12s, background 0.12s;
+}
+.tab:hover {
+  color: #2f5478;
+}
+.tab.active {
+  background: linear-gradient(180deg, #fff7e2, #ffd88c 70%, #f6c367);
+  border-color: #dda63a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 -1px 0 rgba(180, 130, 40, 0.15);
+}
+.inv-grid {
+  background: linear-gradient(180deg, #e9f2fa, #d4e3f1);
+  border-color: #b3cbe1;
+  box-shadow: inset 0 2px 7px rgba(70, 100, 130, 0.18), 0 1px 0 #fff;
+}
+.inv-slot {
+  border-color: #c4d9eb;
+  box-shadow: inset 0 1px 0 #fff, inset 0 0 0 1px rgba(255, 255, 255, 0.35), 0 1px 2px rgba(90, 120, 150, 0.14);
+}
+.inv-slot:not(.empty):hover {
+  box-shadow: 0 5px 12px rgba(200, 140, 40, 0.28), inset 0 1px 0 #fff;
+}
+.inv-slot .rare {
+  box-shadow: inset 0 0 10px rgba(255, 190, 60, 0.7), inset 0 0 0 1px rgba(255, 190, 60, 0.45);
+}
+.inv-right {
+  background: linear-gradient(180deg, #f6faff, #dfebf7);
+  border-color: #b3cbe1;
+  box-shadow: inset 0 1px 0 #fff;
+}
+.side-title {
+  color: #517294;
+  letter-spacing: 1.4px;
+}
+.side-title::after {
+  content: "";
+  display: block;
+  height: 1px;
+  margin-top: 3px;
+  background: linear-gradient(90deg, rgba(150, 180, 210, 0.6), rgba(150, 180, 210, 0));
+}
+.equip-row,
+.cs-row {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.inv-foot {
+  background: linear-gradient(180deg, #fffaea, #ffe6ac);
+  border-color: #dfb96c;
+  box-shadow: inset 0 1px 0 #fff;
+}
+
+/* 任务卡片 */
+.quest-item,
+.q-card {
+  box-shadow: inset 0 1px 0 #fff;
+}
+
+/* 提示与日志 */
+.toast {
+  background: linear-gradient(180deg, #fffdf3, #ffe6b0 55%, #ffd693);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(180, 130, 40, 0.45), inset 0 1px 0 #fff;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.log-line {
+  border-radius: 7px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(1.5px);
+}
+
+/* ============================================================
+   开始界面
+   ============================================================ */
+.start-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.985) 0%, rgba(241, 248, 255, 0.97) 48%, rgba(220, 234, 247, 0.97) 100%);
+  border: 3px solid #fff;
+  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.65), 0 0 0 2px rgba(38, 68, 100, 0.5), 0 0 0 6px rgba(240, 196, 105, 0.28);
+}
+.start-card::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(202, 168, 108, 0.4);
+  border-radius: 15px;
+  pointer-events: none;
+}
+.start-card::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  width: 128px;
+  height: 4px;
+  transform: translateX(-50%);
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(90deg, rgba(255, 210, 130, 0), #ffd98a 30%, #fff3d2 50%, #ffd98a 70%, rgba(255, 210, 130, 0));
+  box-shadow: 0 0 14px rgba(255, 200, 110, 0.6);
+  pointer-events: none;
+}
+.feat {
+  background: linear-gradient(180deg, #fbfdff, #e7f1fa);
+  border-color: #cfe0ef;
+  box-shadow: inset 0 1px 0 #fff;
+}
+.start-controls {
+  background: linear-gradient(180deg, #fffaed, #ffefc9);
+  border-color: #e6cb8e;
+  box-shadow: inset 0 1px 0 #fff;
+}
+
+/* ============================================================
+   触屏层细节（尺寸仍由 mobile.css 控制）
+   ============================================================ */
+body.is-touch .th-bar,
+body.is-touch #touch-hud {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+body.is-touch .ts-ring {
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4), inset 0 0 26px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+body.is-touch .ts-knob {
+  box-shadow: 0 7px 16px rgba(0, 0, 0, 0.45), inset 0 -3px 7px rgba(90, 130, 170, 0.38), inset 0 2px 5px #fff;
+}
+body.is-touch .t-btn.atk {
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45), inset 0 -5px 10px rgba(120, 60, 0, 0.25), inset 0 2px 0 rgba(255, 255, 255, 0.55);
+}
+body.is-touch .t-btn.jump {
+  box-shadow: 0 7px 16px rgba(0, 0, 0, 0.42), inset 0 -4px 9px rgba(10, 50, 80, 0.3), inset 0 2px 0 rgba(255, 255, 255, 0.4);
+}
+body.is-touch .t-skill {
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 0 0 1px rgba(255, 214, 130, 0.16);
+}
+
+/* 降低动效偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .bar .fill::after,
+  .exp-bar .fill::after,
+  .start-glow,
+  .start-btn::after {
+    animation: none !important;
+  }
+  .panel:not([hidden]) {
+    animation: none;
+  }
+}
+
+/* 自绘准星时隐藏系统光标（只作用于画布，面板内仍显示指针） */
+body.aim-cursor #game { cursor: none; }
+
+/* 技能槽：底部技能色条 + 图标微光，让七个槽位更容易区分 */
+.slot[data-skill] {
+  background: linear-gradient(180deg, #5479a1 0%, #2c4a68 52%, #1b2f45 100%);
+}
+.slot[data-skill]::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  bottom: 1px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--tint, #cfe3f7), transparent);
+  opacity: 0.8;
+  pointer-events: none;
+  z-index: 2;
+}
+.slot[data-skill] .icon {
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.18));
+}
+.slot[data-skill]:hover::before {
+  opacity: 1;
+  box-shadow: 0 0 8px var(--tint, #cfe3f7);
+}
+
+/* 状态面板：左侧职业色装饰条 */
+.status-plate::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, #b6f08a, #63b93f 55%, #3f8a26);
+  box-shadow: 0 0 10px rgba(120, 220, 110, 0.5);
+  pointer-events: none;
+}
+
+/* ============================================================
+   属性面板细节
+   ============================================================ */
+.stat-row {
+  background: linear-gradient(180deg, #ffffff, #eef5fc);
+  border-color: #d3e3f0;
+  box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(60, 90, 120, 0.07);
+  transition: border-color 0.12s, transform 0.12s;
+}
+.stat-row:hover {
+  border-color: #e6c07a;
+  transform: translateX(1px);
+}
+.stat-row .s-val {
+  font-size: 15px;
+  letter-spacing: 0.3px;
+}
+.plus-btn:disabled {
+  opacity: 0.45;
+  filter: grayscale(0.55);
+}
+.ap-line {
+  box-shadow: inset 0 1px 0 #fff;
+}
+
+/* ============================================================
+   任务卡片
+   ============================================================ */
+.quest-card {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 3px 11px rgba(40, 70, 100, 0.09), inset 0 1px 0 #fff;
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+}
+.quest-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, #b9d6ee, #7fa8cc);
+  pointer-events: none;
+}
+.quest-card.active::before {
+  background: linear-gradient(180deg, #ffe1a0, #e08c1c);
+  box-shadow: 0 0 10px rgba(240, 170, 60, 0.4);
+}
+.quest-card.done::before {
+  background: linear-gradient(180deg, #bfe9c9, #5aa873);
+}
+.quest-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(40, 70, 100, 0.15), inset 0 1px 0 #fff;
+}
+.qc-state {
+  border-radius: 999px;
+  padding: 1px 8px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+}
+.qc-prog .bar2 {
+  box-shadow: inset 0 1px 3px rgba(60, 90, 120, 0.22);
+}
+.qc-prog .bar2 i {
+  box-shadow: 0 0 8px rgba(240, 170, 60, 0.42);
+  transition: width 0.25s ease-out;
+}
+
+/* ============================================================
+   开始界面：标题与特性卡
+   ============================================================ */
+.start-card {
+  background:
+    repeating-linear-gradient(45deg, rgba(96, 134, 172, 0.035) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.985) 0%, rgba(241, 248, 255, 0.97) 48%, rgba(219, 233, 247, 0.98) 100%);
+}
+.start-card h1 {
+  background: linear-gradient(180deg, #4a80aa 0%, #245178 52%, #16344c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95)) drop-shadow(0 7px 12px rgba(30, 70, 110, 0.22));
+  padding-bottom: 2px;
+}
+.start-card h1 span {
+  -webkit-text-fill-color: #e09a24;
+  background: none;
+  filter: drop-shadow(0 1px 0 #fff);
+}
+.start-card h1::after {
+  content: "";
+  display: block;
+  width: 88px;
+  height: 2px;
+  margin: 9px auto 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(226, 178, 98, 0), #e2b262 28%, #ffedc4 50%, #e2b262 72%, rgba(226, 178, 98, 0));
+  box-shadow: 0 0 10px rgba(226, 178, 98, 0.55);
+}
+.feat {
+  position: relative;
+  padding-left: 15px;
+  box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(60, 90, 120, 0.05);
+}
+.feat::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 9px;
+  bottom: 9px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #ffd98a, #e09a24);
+  opacity: 0.85;
+}
+
+/* ============================================================
+   帮助面板：按键与说明对齐
+   ============================================================ */
+.help-grid { gap: 8px 12px; }
+.hk {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(188, 210, 230, 0.8);
+  box-shadow: inset 0 1px 0 #fff;
+}
+.hk .keys {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  min-width: 76px;
+}
+.hk > span:last-child {
+  flex: 1;
+  margin-left: auto;
+  text-align: left;
+  line-height: 1.3;
+}
+.hk kbd {
+  box-shadow: 0 1px 0 rgba(120, 150, 180, 0.5), inset 0 1px 0 #fff;
+}
+.help-tips {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
