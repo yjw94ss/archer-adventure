@@ -52,6 +52,10 @@ class Game {
     this.nearPortal = null;
     this.endingShown = false;
     this.finalCleared = false;
+    this.touchMode = false;
+    this.assistAngle = null;
+    this.assistTarget = null;
+    this.manualAimT = 0;
 
     this.player = new Player(this, MAP.spawn.x, MAP.spawn.y);
     this.quests = QUESTS.map((def) => ({ def, state: 'available', progress: 0 }));
@@ -60,12 +64,18 @@ class Game {
 
     this.spawnMonsters();
     this.initInput();
+    this.initTouch();
 
     this.camera.x = clamp(this.player.x - VIEW_W / 2, 0, WORLD_W - VIEW_W);
     this.camera.y = clamp(this.player.y - VIEW_H * 0.62, 0, WORLD_H - VIEW_H);
 
     this.layout();
     window.addEventListener('resize', () => this.layout());
+    window.addEventListener('orientationchange', () => setTimeout(() => this.layout(), 260));
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => this.layout());
+    }
+    document.addEventListener('fullscreenchange', () => setTimeout(() => this.layout(), 120));
     this.ui.update(0);
     this.ui.setMapInfo(MAP);
   }
@@ -120,7 +130,10 @@ class Game {
     );
     if (!q) return;
     this.ui.toast('可接委托：' + q.def.name);
-    this.ui.log(`${q.def.giver} 似乎有话想说：按 T 打开任务日志接取「${q.def.name}」`, 'sys');
+    this.ui.log(
+      `${q.def.giver} 似乎有话想说：${this.touchMode ? '点右上「任务」' : '按 T 打开任务日志'}接取「${q.def.name}」`,
+      'sys'
+    );
   }
 
   updatePortal(dt) {
@@ -131,7 +144,8 @@ class Game {
       if (Math.abs(p.x - pt.x) > 64) continue;
       if (p.y < pt.y - 150 || p.y > pt.y + 28) continue;
       this.nearPortal = pt;
-      if (this.input.upPressed && this.portalCd <= 0) {
+      const pressed = this.input.upPressed || (this.touchMode && this.input.up);
+      if (pressed && this.portalCd <= 0) {
         if (pt.reqLv && p.level < pt.reqLv) {
           this.ui.toast(`需要 Lv.${pt.reqLv} 才能前往 ${pt.label}`);
           this.ui.log(`传送门尚未开启：${pt.label} 需要 Lv.${pt.reqLv}`, 'sys');
@@ -146,10 +160,24 @@ class Game {
 
   /* ---------- 布局 ---------- */
   layout() {
-    const s = Math.min(window.innerWidth / VIEW_W, (window.innerHeight - 8) / VIEW_H);
-    this.stageScale = clamp(s, 0.35, 1.6);
+    const vw = window.innerWidth || VIEW_W;
+    const vh = window.innerHeight || VIEW_H;
+    const s = Math.min(vw / VIEW_W, vh / VIEW_H);
+    // 手机端允许缩得更小，保证整屏完整显示（不裁切）
+    this.stageScale = clamp(s, 0.2, 1.6);
     this.stage.style.transform = `scale(${this.stageScale})`;
-    const ratio = clamp((window.devicePixelRatio || 1) * this.stageScale, 1, 2.5);
+
+    // 供移动端 UI 反向缩放：控件与面板保持真实像素尺寸
+    const inv = 1 / this.stageScale;
+    const root = document.documentElement.style;
+    root.setProperty('--inv', inv.toFixed(4));
+    root.setProperty('--ssw', (VIEW_W * this.stageScale).toFixed(1) + 'px');
+    root.setProperty('--ssh', (VIEW_H * this.stageScale).toFixed(1) + 'px');
+
+    document.body.classList.toggle('is-portrait', vh > vw * 1.06);
+
+    const cap = this.touchMode ? 1.35 : 2.5;
+    const ratio = clamp((window.devicePixelRatio || 1) * this.stageScale, 1, cap);
     this.renderScale = ratio;
     this.canvas.width = Math.round(VIEW_W * ratio);
     this.canvas.height = Math.round(VIEW_H * ratio);
@@ -297,6 +325,278 @@ class Game {
     });
   }
 
+  /* ---------- 触屏 ---------- */
+  initTouch() {
+    const qs = new URLSearchParams(location.search).get('touch');
+    const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    const mobileUA = /Android|iPhone|iPad|iPod|Mobile|Tablet|HarmonyOS/i.test(navigator.userAgent || '');
+    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isTouch = qs === '1' ? true : qs === '0' ? false : coarse || (hasTouch && mobileUA);
+    if (!isTouch) return;
+
+    this.touchMode = true;
+    document.body.classList.add('is-touch');
+
+    // 开始界面换成触屏说明
+    const ctr = document.querySelector('.start-controls');
+    if (ctr) {
+      ctr.innerHTML =
+        '<span>左侧摇杆 移动 / 攀爬</span><span>「射」按住连射</span>' +
+        '<span>「跳」跳跃</span><span>技能自动瞄准最近敌人</span>';
+    }
+    const foot = document.querySelector('.start-foot');
+    if (foot) foot.textContent = '建议横屏 · 右上角可切换全屏 · 拖动画面也可精确瞄准';
+    const btn = document.getElementById('start-btn');
+    if (btn) btn.textContent = '进 入 森 林';
+
+    // 帮助面板换成触屏说明
+    const hg = document.querySelector('.help-grid');
+    if (hg) {
+      hg.innerHTML = [
+        ['摇杆', '左右移动，向上/向下攀爬绳索与梯子'],
+        ['射', '按住连续射击，自动锁定最近的敌人'],
+        ['跳', '跳跃；摇杆向下 + 跳 可从单向平台跳下'],
+        ['拖动画面', '手动精确瞄准，松手约 2 秒后恢复自动瞄准'],
+        ['技能', '三连箭 / 贯穿箭 / 箭雨 / 鹰眼（有冷却）'],
+        ['红 / 蓝', '即时恢复 HP / MP，数量见按钮角标'],
+        ['右上', '背包、属性、任务、帮助、全屏'],
+        ['传送门', '走到地图尽头，把摇杆向上推即可进入下一章'],
+      ]
+        .map(([k, v]) => `<div class="hk"><kbd>${k}</kbd><span>${v}</span></div>`)
+        .join('');
+    }
+    const tips = document.querySelector('.help-tips');
+    if (tips) {
+      tips.innerHTML =
+        '<p>· 手机上的核心打法是「自动瞄准 + 风筝」：拉开距离，按住「射」连续输出。</p>' +
+        '<p>· 摇杆向上推可抓绳索、进传送门；向下推 + 跳 可穿过单向平台。</p>' +
+        '<p>· 技能有冷却与 MP 消耗，蓝药水不够时先退到高台等回蓝。</p>' +
+        '<p>· 四章地图依次为：蘑菇森林 → 幽暗洞穴 → 毒雾沼泽 → 天空遗迹，等级门槛 Lv.8 / 14 / 20。</p>' +
+        '<p>· 右上「全屏」可隐藏浏览器地址栏，视野更大；建议始终横屏游玩。</p>';
+    }
+
+    const inp = this.input;
+
+    /* ---- 虚拟摇杆 ---- */
+    const stick = document.getElementById('t-stick');
+    const knob = document.getElementById('t-knob');
+    let sid = null, cx = 0, cy = 0, R = 46;
+
+    const applyStick = (dx, dy) => {
+      const len = Math.hypot(dx, dy) || 1;
+      const cl = Math.min(len, R);
+      const nx = dx / len;
+      const ny = dy / len;
+      knob.style.transform = `translate(${(nx * cl).toFixed(1)}px, ${(ny * cl).toFixed(1)}px)`;
+      const mx = (nx * cl) / R;
+      const my = (ny * cl) / R;
+      const dead = 0.24;
+      const wasUp = inp.up;
+      inp.left = mx < -dead;
+      inp.right = mx > dead;
+      inp.up = my < -0.42;
+      inp.down = my > 0.42;
+      if ((inp.up || inp.down) && Math.abs(my) > dead) inp.aimMode = 'key';
+      if (inp.up && !wasUp) inp.upPressed = true;
+      stick.classList.toggle('on', cl > R * 0.16);
+    };
+
+    const resetStick = () => {
+      knob.style.transform = 'translate(0px, 0px)';
+      inp.left = inp.right = inp.up = inp.down = false;
+      stick.classList.remove('on');
+    };
+
+    stick.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      Sound.init();
+      sid = e.pointerId;
+      try { stick.setPointerCapture(sid); } catch (_) {}
+      const r = stick.getBoundingClientRect();
+      cx = r.left + r.width / 2;
+      cy = r.top + r.height / 2;
+      R = r.width * 0.33;
+      applyStick(e.clientX - cx, e.clientY - cy);
+    });
+    stick.addEventListener('pointermove', (e) => {
+      if (e.pointerId !== sid) return;
+      e.preventDefault();
+      applyStick(e.clientX - cx, e.clientY - cy);
+    });
+    const stickEnd = (e) => {
+      if (e.pointerId !== sid) return;
+      sid = null;
+      resetStick();
+    };
+    stick.addEventListener('pointerup', stickEnd);
+    stick.addEventListener('pointercancel', stickEnd);
+    stick.addEventListener('lostpointercapture', stickEnd);
+
+    /* ---- 按住型按键 ---- */
+    const bindHold = (id, down, up) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        Sound.init();
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+        el.classList.add('on');
+        down();
+      });
+      const release = () => {
+        el.classList.remove('on');
+        if (up) up();
+      };
+      el.addEventListener('pointerup', release);
+      el.addEventListener('pointercancel', release);
+      el.addEventListener('pointerleave', release);
+    };
+
+    bindHold(
+      't-atk',
+      () => {
+        this.mouseHeld = true;
+        this.input.attack = true;
+        Sound.ui();
+      },
+      () => {
+        this.mouseHeld = false;
+        this.input.attack = this.keyAttack;
+      }
+    );
+    bindHold(
+      't-jump',
+      () => {
+        this.input.jumpPressed = true;
+        this.input.jump = true;
+      },
+      () => {
+        this.input.jump = false;
+      }
+    );
+
+    /* ---- 技能 / 药水 / 面板 ---- */
+    document.querySelectorAll('#t-actions .t-skill').forEach((b) => {
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        Sound.init();
+        b.classList.add('on');
+        setTimeout(() => b.classList.remove('on'), 130);
+        this.castSkill(b.dataset.skill);
+      });
+    });
+    document.querySelectorAll('#t-actions [data-potion]').forEach((b) => {
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        b.classList.add('on');
+        setTimeout(() => b.classList.remove('on'), 130);
+        this.usePotion(b.dataset.potion);
+      });
+    });
+    document.querySelectorAll('#touch-menu [data-panel]').forEach((b) => {
+      b.addEventListener('click', () => {
+        Sound.ui();
+        this.ui.togglePanel(b.dataset.panel);
+      });
+    });
+
+    const full = document.getElementById('t-full');
+    if (full) {
+      const supported = !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+      if (!supported) full.style.display = 'none';
+      else full.addEventListener('click', () => this.toggleFullscreen());
+    }
+
+    const skip = document.getElementById('rh-skip');
+    if (skip) {
+      skip.addEventListener('click', () => {
+        document.getElementById('rotate-hint').classList.add('skip');
+        setTimeout(() => this.layout(), 60);
+      });
+    }
+
+    /* ---- 画面拖动瞄准（精确瞄准 / 按住连射） ---- */
+    const aimAt = (clientX, clientY) => {
+      const r = this.canvas.getBoundingClientRect();
+      const sx = ((clientX - r.left) / r.width) * VIEW_W;
+      const sy = ((clientY - r.top) / r.height) * VIEW_H;
+      inp.mouseScreenX = sx;
+      inp.mouseScreenY = sy;
+      inp.mouseActive = true;
+      inp.aimMode = 'mouse';
+      this.manualAimT = 2.4;
+    };
+
+    this.canvas.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse') return;
+      if (!this.started) return;
+      e.preventDefault();
+      Sound.init();
+      aimAt(e.clientX, e.clientY);
+      this.mouseHeld = true;
+      inp.attack = true;
+      try { this.canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+    this.canvas.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'mouse' || !this.mouseHeld) return;
+      e.preventDefault();
+      aimAt(e.clientX, e.clientY);
+    });
+    const canvasUp = () => {
+      if (!this.touchMode) return;
+      this.mouseHeld = false;
+      inp.attack = this.keyAttack;
+    };
+    this.canvas.addEventListener('pointerup', canvasUp);
+    this.canvas.addEventListener('pointercancel', canvasUp);
+
+    // 阻止双击缩放 / 页面滚动
+    document.addEventListener('gesturestart', (e) => e.preventDefault());
+    document.addEventListener(
+      'touchmove',
+      (e) => {
+        const t = e.target;
+        if (t && t.closest && t.closest('.panel-body, .start-card, .ending-card')) return;
+        if (e.cancelable) e.preventDefault();
+      },
+      { passive: false }
+    );
+  }
+
+  /* ---------- 全屏 ---------- */
+  toggleFullscreen() {
+    const d = document;
+    const el = d.documentElement;
+    try {
+      if (!d.fullscreenElement && !d.webkitFullscreenElement) {
+        const req = el.requestFullscreen || el.webkitRequestFullscreen;
+        if (req) req.call(el);
+      } else {
+        const exit = d.exitFullscreen || d.webkitExitFullscreen;
+        if (exit) exit.call(d);
+      }
+    } catch (_) {}
+  }
+
+  /* ---------- 触屏自动瞄准 ---------- */
+  findAimTarget() {
+    const p = this.player;
+    let best = null;
+    let bd = 700;
+    for (const m of this.monsters) {
+      if (m.dead) continue;
+      const ay = m.y - m.h * 0.6;
+      const dy = ay - (p.y - 44);
+      if (Math.abs(dy) > 320) continue;
+      const d = Math.hypot(m.x - p.x, dy);
+      if (d < bd) {
+        bd = d;
+        best = m;
+      }
+    }
+    return best;
+  }
+
   /* ---------- 战斗 ---------- */
   getBowPos() {
     const p = this.player;
@@ -381,8 +681,16 @@ class Game {
       }
       this.shake(5);
     } else if (id === 'rain') {
-      const tx = this.input.aimMode === 'mouse' ? this.input.mouseWorldX : p.x + p.facing * 180;
-      const ty = this.input.aimMode === 'mouse' ? this.input.mouseWorldY : p.y;
+      const tx = this.assistTarget
+        ? this.assistTarget.x
+        : this.input.aimMode === 'mouse'
+        ? this.input.mouseWorldX
+        : p.x + p.facing * 180;
+      const ty = this.assistTarget
+        ? this.assistTarget.y
+        : this.input.aimMode === 'mouse'
+        ? this.input.mouseWorldY
+        : p.y;
       this.rainZones.push({
         x: clamp(tx, 40, WORLD_W - 40),
         y: clamp(ty, 120, WORLD_H - 20),
@@ -624,6 +932,24 @@ class Game {
 
     // 冷却
     for (const k in this.cooldowns) this.cooldowns[k] = Math.max(0, this.cooldowns[k] - dt);
+
+    /* ---- 触屏自动瞄准 ---- */
+    this.assistAngle = null;
+    this.assistTarget = null;
+    if (this.manualAimT > 0) {
+      this.manualAimT -= dt;
+      if (this.manualAimT <= 0) {
+        this.input.mouseActive = false;
+        this.input.aimMode = 'key';
+      }
+    }
+    if (this.touchMode && this.manualAimT <= 0 && !this.input.up && !this.input.down && !p.dead) {
+      const tgt = this.findAimTarget();
+      if (tgt) {
+        this.assistTarget = tgt;
+        this.assistAngle = Math.atan2(tgt.y - tgt.h * 0.6 - (p.y - 44), tgt.x - p.x);
+      }
+    }
 
     p.update(dt, this);
     this.input.jumpPressed = false;
@@ -880,8 +1206,9 @@ function startGame() {
   setTimeout(() => (screen.style.display = 'none'), 520);
   game.started = true;
   game.lastTs = 0;
+  document.body.classList.add('playing');
   game.ui.log('露西亚：森林里的蜗牛就拜托你了！', 'sys');
-  game.ui.toast('按 T 打开任务日志，接取第一份委托');
+  game.ui.toast(game.touchMode ? '点右上「任务」接取第一份委托' : '按 T 打开任务日志，接取第一份委托');
   Sound.skill();
 }
 
@@ -891,6 +1218,13 @@ document.getElementById('start-btn').addEventListener('click', startGame);
 const __params = new URLSearchParams(location.search);
 if (__params.get('play') === '1') {
   window.addEventListener('load', () => setTimeout(startGame, 120));
+}
+
+// 截图/调试：关闭所有过渡动画（无头截图的 CSS transition 不推进）
+if (__params.get('notrans') === '1') {
+  const st = document.createElement('style');
+  st.textContent = '*,*::before,*::after{transition:none!important;animation:none!important}';
+  document.head.appendChild(st);
 }
 
 // 调试 / 演示模式
@@ -1099,6 +1433,97 @@ if (__test) {
         const o = document.createElement('div');
         o.id = 'simout';
         o.textContent = `PORTALSIM bad=${bad} | ` + out.join(' | ');
+        document.body.appendChild(o);
+      } else if (__test === 'aim') {
+        // 触屏：摇杆映射 / 按键 / 自动瞄准
+        const out = [];
+        const step = (n) => {
+          for (let i = 0; i < n; i++) game.update(1 / 60);
+        };
+        out.push('touch=' + game.touchMode + ' inv=' + (1 / game.stageScale).toFixed(2));
+        out.push('hud=' + (document.getElementById('th-hp') ? 'ok' : 'missing'));
+
+        const stick = document.getElementById('t-stick');
+        const r = stick.getBoundingClientRect();
+        const pe = (type, x, y, id) =>
+          new PointerEvent(type, {
+            pointerId: id || 1,
+            pointerType: 'touch',
+            clientX: x,
+            clientY: y,
+            bubbles: true,
+            cancelable: true,
+          });
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+
+        stick.dispatchEvent(pe('pointerdown', r.left + r.width * 0.93, cy));
+        out.push('右=' + (inp.right && !inp.left));
+        stick.dispatchEvent(pe('pointermove', cx, r.top + r.height * 0.04));
+        out.push('上=' + inp.up);
+        stick.dispatchEvent(pe('pointermove', r.left + r.width * 0.06, r.top + r.height * 0.96));
+        out.push('左下=' + (inp.left && inp.down));
+        stick.dispatchEvent(pe('pointerup', cx, cy));
+        out.push('松手=' + (!inp.left && !inp.right && !inp.up && !inp.down));
+
+        const atk = document.getElementById('t-atk');
+        atk.dispatchEvent(pe('pointerdown', 0, 0, 2));
+        out.push('attack=' + inp.attack);
+        atk.dispatchEvent(pe('pointerup', 0, 0, 2));
+        out.push('attackOff=' + !inp.attack);
+
+        const jump = document.getElementById('t-jump');
+        jump.dispatchEvent(pe('pointerdown', 0, 0, 3));
+        out.push('jump=' + (inp.jump && inp.jumpPressed));
+        jump.dispatchEvent(pe('pointerup', 0, 0, 3));
+        out.push('jumpOff=' + !inp.jump);
+
+        // 自动瞄准：站到目标左侧但背对目标
+        p.x = 1480;
+        p.y = 1300;
+        p.vy = 0;
+        p.facing = -1;
+        inp.left = inp.right = inp.up = inp.down = false;
+        step(8);
+        let mon = null;
+        let bd = 1e9;
+        for (const m of game.monsters) {
+          if (m.dead) continue;
+          const d = Math.hypot(m.x - p.x, m.y - p.y);
+          if (d < bd) {
+            bd = d;
+            mon = m;
+          }
+        }
+        if (mon) {
+          // 只留目标怪，保证自动瞄准锁定它
+          game.monsters.forEach((m) => {
+            if (m !== mon) {
+              m.dead = true;
+              m.respawn = 999;
+            }
+          });
+          p.x = mon.x - 230;
+          p.y = mon.y;
+          p.facing = -1;
+          step(6);
+          out.push('assist=' + (game.assistAngle != null) + '@' + (game.assistTarget === mon));
+          out.push('angle=' + (p.aimAngle * 57.3).toFixed(0) + '°');
+          const hp0 = mon.hp;
+          inp.attack = true;
+          for (let i = 0; i < 300; i++) {
+            game.update(1 / 60);
+            if (mon.dead) break;
+          }
+          inp.attack = false;
+          out.push(`${mon.type} hp=${hp0}->${Math.max(0, mon.hp).toFixed(0)} face=${p.facing}`);
+        } else {
+          out.push('no-monster');
+        }
+
+        const o = document.createElement('div');
+        o.id = 'simout';
+        o.textContent = 'AIM ' + out.join(' | ');
         document.body.appendChild(o);
       } else if (__test === 'sim') {
         // 固定步长无头模拟：验证战斗、掉落、升级、任务链路

@@ -280,7 +280,11 @@ class Player {
     }
 
     // 瞄准
-    if (inp.aimMode === 'mouse' && inp.mouseActive) {
+    if (game.assistAngle != null) {
+      // 触屏自动瞄准：锁定最近的敌人
+      this.aimAngle = game.assistAngle;
+      this.aimMode = 'assist';
+    } else if (inp.aimMode === 'mouse' && inp.mouseActive) {
       const bx = this.x;
       const by = this.y - 44;
       this.aimAngle = Math.atan2(inp.mouseWorldY - by, inp.mouseWorldX - bx);
@@ -355,8 +359,8 @@ class Player {
       this.vx += dir * accel * dt;
       this.vx = clamp(this.vx, -maxSpeed, maxSpeed);
       if (Math.abs(this.aimAngle) < Math.PI / 2 - 0.2 || Math.abs(this.aimAngle) > Math.PI / 2 + 0.2) {
-        // 仅在键盘瞄准模式下强制转向
-        if (inp.aimMode !== 'mouse') this.facing = dir;
+        // 仅在键盘瞄准模式下强制转向（鼠标/自动瞄准由射角决定朝向）
+        if (inp.aimMode === 'key') this.facing = dir;
       }
     } else {
       const fr = (this.onGround ? 2400 : 700) * dt;

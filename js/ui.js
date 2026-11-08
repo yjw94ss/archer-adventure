@@ -274,6 +274,7 @@ class UI {
     this.bossVisible = false;
     this.build();
     this.bindGlobal();
+    this.initTouchHud();
     this.drawPortrait(document.getElementById('portrait-canvas'));
     this.drawPortrait(document.getElementById('stat-portrait'));
     this.updateQuestTracker();
@@ -387,6 +388,66 @@ class UI {
     });
   }
 
+  /* ---------- 触屏 HUD ---------- */
+  initTouchHud() {
+    const q = (id) => document.getElementById(id);
+    this.tEl = {
+      lv: q('th-lv'),
+      hp: q('th-hp'),
+      hpt: q('th-hp-t'),
+      mp: q('th-mp'),
+      mpt: q('th-mp-t'),
+      map: q('th-map'),
+      gold: q('th-gold'),
+      exp: q('th-exp'),
+    };
+    this.tSkills = {};
+    document.querySelectorAll('#t-actions .t-skill').forEach((b) => {
+      this.tSkills[b.dataset.skill] = { el: b, num: b.querySelector('.tnum'), cooling: false };
+    });
+    this.tPotions = {};
+    document.querySelectorAll('#t-actions [data-potion]').forEach((b) => {
+      this.tPotions[b.dataset.potion] = { el: b, num: b.querySelector('[data-count]') };
+    });
+  }
+
+  updateTouch(p) {
+    const t = this.tEl;
+    if (!t || !t.lv) return;
+    const hpPct = clamp((p.hp / p.maxHp) * 100, 0, 100);
+    const mpPct = clamp((p.mp / p.maxMp) * 100, 0, 100);
+    t.hp.style.width = hpPct + '%';
+    t.mp.style.width = mpPct + '%';
+    t.hpt.textContent = `${Math.ceil(p.hp)} / ${p.maxHp}`;
+    t.mpt.textContent = `${Math.ceil(p.mp)} / ${p.maxMp}`;
+    t.lv.textContent = p.level;
+    t.gold.textContent = p.gold.toLocaleString() + ' M';
+    const need = expNeed(p.level);
+    t.exp.textContent = 'EXP ' + clamp((p.exp / need) * 100, 0, 100).toFixed(0) + '%';
+
+    for (const id in this.tSkills) {
+      const s = this.tSkills[id];
+      const left = this.game.cooldowns[id] || 0;
+      const skill = SKILL_MAP[id];
+      if (left > 0) {
+        s.el.classList.add('cooling');
+        s.num.textContent = left > 1 ? Math.ceil(left) : left.toFixed(1);
+        s.cooling = true;
+      } else if (s.cooling) {
+        s.el.classList.remove('cooling');
+        s.num.textContent = '';
+        s.cooling = false;
+      }
+      s.el.classList.toggle('no-mp', p.mp < skill.mp);
+    }
+    for (const id in this.tPotions) {
+      const pt = this.tPotions[id];
+      const n = p.countItem(id);
+      pt.num.textContent = '×' + n;
+      pt.el.classList.toggle('empty', n <= 0);
+    }
+  }
+
   bindGlobal() {
     document.querySelectorAll('.panel').forEach((p) => {
       p.addEventListener('mousedown', (e) => e.stopPropagation());
@@ -471,6 +532,7 @@ class UI {
     if (!el) return;
     el.hidden = false;
     this.activePanel = name;
+    document.body.classList.add('panel-open');
     if (name === 'inventory') this.renderInventory();
     if (name === 'stats') this.renderStats();
     if (name === 'quests') this.renderQuests();
@@ -480,6 +542,7 @@ class UI {
   closePanels() {
     document.querySelectorAll('.panel').forEach((p) => (p.hidden = true));
     this.activePanel = null;
+    document.body.classList.remove('panel-open');
     this.hideTip();
   }
 
@@ -600,8 +663,10 @@ class UI {
       this.el['boss-name'].textContent = boss.name;
       this.el['boss-lv'].textContent = 'Lv.' + boss.level;
       this.el['boss-hp-text'].textContent = `${Math.max(0, Math.ceil(boss.hp))} / ${boss.maxHp}`;
+      if (this.game.touchMode) document.body.classList.add('boss-on');
     } else {
       this.el['boss-bar'].classList.remove('show');
+      if (this.game.touchMode) document.body.classList.remove('boss-on');
     }
 
     // 背包面板实时金币
@@ -609,6 +674,8 @@ class UI {
       this.el['inv-meso'].textContent = p.gold;
       this.el['inv-slots'].textContent = p.inventory.length + ' / ' + MAX_INV;
     }
+
+    if (this.game.touchMode) this.updateTouch(p);
 
     this.drawMinimap();
   }
@@ -621,6 +688,7 @@ class UI {
     const n = chapterNo(def.chapter);
     if (this.el['map-ch']) this.el['map-ch'].textContent = 'CH.' + n;
     if (this.el['hud-chapter']) this.el['hud-chapter'].textContent = 'CH.' + n;
+    if (this.tEl && this.tEl.map) this.tEl.map.textContent = 'CH.' + n + ' ' + def.name;
   }
 
   /* ---------- 通关结算 ---------- */

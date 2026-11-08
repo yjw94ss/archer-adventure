@@ -2,9 +2,14 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0a1725" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="mobile-web-app-capable" content="yes" />
 <title>枫之谷 · 弓箭手传说</title>
 <link rel="stylesheet" href="css/ui.css" />
+<link rel="stylesheet" href="css/mobile.css" />
 </head>
 <body>
 <div id="stage">
@@ -219,6 +224,56 @@
       </div>
     </div>
 
+    <!-- ================= 移动端触屏层 ================= -->
+    <div id="touch-ui">
+      <!-- 左上：紧凑状态 -->
+      <div id="touch-hud">
+        <div class="th-top">
+          <span class="th-lv">Lv.<b id="th-lv">1</b></span>
+          <span class="th-map" id="th-map">蘑菇森林</span>
+        </div>
+        <div class="th-bar hp"><i id="th-hp"></i><em id="th-hp-t">100 / 100</em></div>
+        <div class="th-bar mp"><i id="th-mp"></i><em id="th-mp-t">60 / 60</em></div>
+        <div class="th-foot"><span id="th-exp">EXP 0%</span><span id="th-gold">0 M</span></div>
+      </div>
+
+      <!-- 右上：面板入口 -->
+      <div id="touch-menu">
+        <button class="tm-btn" data-panel="inventory"><span>▤</span>背包</button>
+        <button class="tm-btn" data-panel="stats"><span>✦</span>属性</button>
+        <button class="tm-btn" data-panel="quests"><span>!</span>任务</button>
+        <button class="tm-btn" data-panel="help"><span>?</span>帮助</button>
+        <button class="tm-btn" id="t-full"><span>⛶</span>全屏</button>
+      </div>
+
+      <!-- 左下：虚拟摇杆 -->
+      <div id="t-stick">
+        <div class="ts-ring">
+          <div class="ts-arrow up"></div>
+          <div class="ts-arrow down"></div>
+        </div>
+        <div class="ts-knob" id="t-knob"></div>
+      </div>
+
+      <!-- 右下：动作键 -->
+      <div id="t-actions">
+        <div class="ta-skills">
+          <button class="t-skill" data-skill="triple">三连<b class="tnum"></b></button>
+          <button class="t-skill" data-skill="pierce">贯穿<b class="tnum"></b></button>
+          <button class="t-skill" data-skill="rain">箭雨<b class="tnum"></b></button>
+          <button class="t-skill" data-skill="eyes">鹰眼<b class="tnum"></b></button>
+        </div>
+        <div class="ta-main">
+          <div class="ta-potion">
+            <button class="t-pt" data-potion="hp_potion">红<i data-count>×0</i></button>
+            <button class="t-pt" data-potion="mp_potion">蓝<i data-count>×0</i></button>
+          </div>
+          <button id="t-jump" class="t-btn jump">跳</button>
+          <button id="t-atk" class="t-btn atk">射</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 道具/技能提示 -->
     <div class="tooltip" id="tooltip"></div>
   </div>
@@ -248,6 +303,14 @@
       <div class="start-foot">建议使用键盘与鼠标 · 支持全屏窗口体验</div>
     </div>
   </div>
+</div>
+
+<!-- ================= 竖屏提示（仅手机，不随舞台缩放） ================= -->
+<div id="rotate-hint">
+  <div class="rh-phone"><span></span></div>
+  <div class="rh-title">请横屏游玩</div>
+  <div class="rh-sub">横屏才有完整视野，左右手也够位置<br />转一下手机，或者点下面的按钮继续</div>
+  <button id="rh-skip">竖屏继续</button>
 </div>
 
 <script src="js/config.js"></script>

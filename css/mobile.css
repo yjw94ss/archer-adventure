@@ -1,0 +1,514 @@
+/* ============================================================
+ *  手机 / 触屏适配层
+ *  - 舞台仍按 1280×720 等比缩放，触屏控件用 --inv 反向缩放，
+ *    因此控件与面板的尺寸、字号都是「真实屏幕像素」，不会被缩小
+ *  - --ssw / --ssh = 缩放过后的舞台实际尺寸（屏幕像素）
+ * ============================================================ */
+:root {
+  --inv: 1;
+  --ssw: 1280px;
+  --ssh: 720px;
+}
+
+/* ---------- 触屏基础行为 ---------- */
+body.is-touch {
+  position: fixed;
+  inset: 0;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+body.is-touch #game { touch-action: none; }
+body.is-touch #stage { border-radius: 0; }
+
+/* 触屏模式隐藏的桌面 HUD */
+body.is-touch .hud-tl,
+body.is-touch .map-panel,
+body.is-touch .hud-bottom,
+body.is-touch .log-box,
+body.is-touch .quick-bar,
+body.is-touch .quick-hint { display: none !important; }
+
+/* 右上任务追踪：缩小放在面板按钮下方 */
+body.is-touch .hud-tr {
+  top: calc(56px * var(--inv));
+  right: calc(10px * var(--inv));
+  width: auto;
+  transform: scale(var(--inv));
+  transform-origin: right top;
+}
+body.is-touch .quest-track {
+  width: 214px;
+  font-size: 11px;
+  padding: 6px 8px 7px;
+}
+/* BOSS 血条出现时隐藏任务追踪，避免遮挡 */
+body.is-touch .hud-tr { transition: opacity 0.25s; }
+body.is-touch.boss-on .hud-tr { opacity: 0; }
+
+/* BOSS 血条：放大到真实尺寸，下移避开状态栏 */
+body.is-touch .boss-bar {
+  top: calc(86px * var(--inv));
+  left: 50%;
+  width: 520px;
+  margin-left: -260px;
+  transform: scale(var(--inv));
+  transform-origin: top center;
+}
+body.is-touch .boss-bar.show {
+  transform: scale(var(--inv));
+}
+
+/* 提示条 */
+body.is-touch .toast-wrap {
+  top: calc(76px * var(--inv));
+  transform: translateX(-50%) scale(var(--inv));
+  transform-origin: top center;
+}
+body.is-touch .toast { font-size: 12px; }
+
+/* 地名横幅 / 升级横幅 */
+body.is-touch .map-banner {
+  transform: translate(-50%, -10px) scale(var(--inv));
+  transform-origin: top center;
+}
+body.is-touch .map-banner.show { transform: translate(-50%, 0) scale(var(--inv)); }
+
+/* ---------- 触屏 HUD ---------- */
+#touch-ui { display: none; }
+body.is-touch #touch-ui {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 18;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+/* 开始界面期间不显示触屏控件 */
+body.is-touch:not(.playing) #touch-ui { opacity: 0; }
+/* 打开面板时隐藏触屏控件，避免误触走位 */
+body.is-touch.panel-open #touch-ui { opacity: 0; }
+body.is-touch.panel-open #touch-ui,
+body.is-touch.panel-open #touch-ui * { pointer-events: none !important; }
+
+#touch-hud {
+  position: absolute;
+  left: calc(10px * var(--inv));
+  top: calc(10px * var(--inv));
+  width: 236px;
+  padding: 7px 9px 6px;
+  border-radius: 12px;
+  transform: scale(var(--inv));
+  transform-origin: left top;
+  background: linear-gradient(180deg, rgba(16, 30, 46, 0.82), rgba(8, 18, 30, 0.78));
+  border: 1.5px solid rgba(160, 210, 255, 0.35);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(3px);
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+.th-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.th-lv {
+  font-size: 11px;
+  font-weight: 800;
+  color: #a9c7e2;
+  letter-spacing: 0.4px;
+}
+.th-lv b { font-size: 14px; color: #ffd977; margin-left: 1px; }
+.th-map {
+  font-size: 11px;
+  font-weight: 800;
+  color: #d8ecff;
+  letter-spacing: 0.6px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+.th-bar {
+  position: relative;
+  height: 13px;
+  margin-top: 4px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: rgba(4, 10, 18, 0.72);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+.th-bar i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  border-radius: 7px;
+  transition: width 0.18s linear;
+}
+.th-bar.hp i { background: linear-gradient(180deg, #ff8d7e, #e0402f 55%, #a81f19); }
+.th-bar.mp i { background: linear-gradient(180deg, #8fd3ff, #2f86d6 55%, #1b5c9e); }
+.th-bar em {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  font-variant-numeric: tabular-nums;
+}
+.th-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #8fb0c9;
+  letter-spacing: 0.3px;
+}
+.th-foot span:last-child { color: #ffd977; }
+
+/* ---------- 面板入口 ---------- */
+#touch-menu {
+  position: absolute;
+  right: calc(10px * var(--inv));
+  top: calc(10px * var(--inv));
+  display: flex;
+  gap: 5px;
+  transform: scale(var(--inv));
+  transform-origin: right top;
+  pointer-events: auto;
+}
+.tm-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  width: 44px;
+  padding: 4px 0 3px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  background: linear-gradient(180deg, rgba(28, 48, 70, 0.88), rgba(12, 24, 38, 0.9));
+  color: #dceaf7;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.15;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.tm-btn span { font-size: 13px; line-height: 1; color: #ffd977; }
+.tm-btn:active { transform: translateY(1px); filter: brightness(1.15); }
+
+/* ---------- 虚拟摇杆 ---------- */
+#t-stick {
+  position: absolute;
+  left: calc(14px * var(--inv));
+  bottom: calc(14px * var(--inv));
+  width: 132px;
+  height: 132px;
+  transform: scale(var(--inv));
+  transform-origin: left bottom;
+  pointer-events: auto;
+  touch-action: none;
+}
+.ts-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, rgba(180, 220, 255, 0.16), rgba(6, 16, 26, 0.34) 70%);
+  border: 2px solid rgba(200, 228, 255, 0.45);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35), inset 0 0 22px rgba(0, 0, 0, 0.25);
+}
+.ts-ring::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46%;
+  height: 46%;
+  margin: -23% 0 0 -23%;
+  border-radius: 50%;
+  border: 1px dashed rgba(200, 228, 255, 0.22);
+}
+.ts-arrow {
+  position: absolute;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  margin-left: -5px;
+  opacity: 0.55;
+}
+.ts-arrow.up { top: 4px; border-bottom: 7px solid rgba(220, 240, 255, 0.8); }
+.ts-arrow.down {
+  bottom: 4px;
+  border-top: 7px solid rgba(220, 240, 255, 0.8);
+}
+.ts-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 60px;
+  height: 60px;
+  margin: -30px 0 0 -30px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 32%, #ffffff, #cfe2f4 62%, #9fbcd8);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.42), inset 0 -3px 6px rgba(90, 130, 170, 0.35);
+  transition: transform 0.05s linear;
+  pointer-events: none;
+}
+#t-stick.on .ts-knob { transition: none; }
+#t-stick.on .ts-ring { border-color: rgba(255, 214, 120, 0.75); }
+
+/* ---------- 动作键 ---------- */
+#t-actions {
+  position: absolute;
+  right: calc(12px * var(--inv));
+  bottom: calc(12px * var(--inv));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  transform: scale(var(--inv));
+  transform-origin: right bottom;
+  pointer-events: none;
+}
+#t-actions button {
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+}
+
+.ta-skills { display: flex; gap: 6px; }
+.t-skill {
+  position: relative;
+  width: 50px;
+  height: 44px;
+  border-radius: 11px;
+  border: 2px solid rgba(255, 255, 255, 0.62);
+  background: linear-gradient(180deg, #5d80a6, #2c4865 60%, #1c3149);
+  color: #eaf4ff;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  overflow: hidden;
+}
+.t-skill .tnum {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: rgba(4, 12, 22, 0.68);
+  font-size: 15px;
+  font-weight: 900;
+  color: #fff;
+  opacity: 0;
+  font-variant-numeric: tabular-nums;
+}
+.t-skill.cooling .tnum { opacity: 1; }
+.t-skill.cooling { border-color: rgba(150, 190, 230, 0.5); }
+.t-skill.no-mp { filter: grayscale(0.5) brightness(0.75); }
+.t-skill.on { transform: translateY(1px) scale(0.97); filter: brightness(1.2); }
+
+.ta-main { display: flex; align-items: flex-end; gap: 8px; }
+.ta-potion { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+.t-pt {
+  width: 48px;
+  height: 34px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.62);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.05;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+.t-pt i {
+  display: block;
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0.9;
+  letter-spacing: 0.2px;
+}
+.t-pt[data-potion="hp_potion"] { background: linear-gradient(180deg, #c2544f, #80262a 60%, #5d181d); }
+.t-pt[data-potion="mp_potion"] { background: linear-gradient(180deg, #4b86c2, #22507e 60%, #17395c); }
+.t-pt.empty { filter: grayscale(0.6) brightness(0.7); }
+.t-pt.on { transform: translateY(1px); filter: brightness(1.2); }
+
+.t-btn {
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 1px;
+  box-shadow: 0 7px 16px rgba(0, 0, 0, 0.42), inset 0 -4px 8px rgba(0, 0, 0, 0.22);
+  transition: transform 0.06s, filter 0.06s;
+}
+.t-btn.atk {
+  width: 80px;
+  height: 80px;
+  font-size: 17px;
+  color: #4a2400;
+  background: radial-gradient(circle at 38% 28%, #ffe4a3, #f0a534 58%, #c3700f);
+  border-color: #fff4d6;
+}
+.t-btn.jump {
+  width: 64px;
+  height: 64px;
+  font-size: 15px;
+  background: radial-gradient(circle at 38% 28%, #cbeaff, #4590c9 58%, #24628f);
+  border-color: #e8f7ff;
+}
+.t-btn.on { transform: scale(0.94); filter: brightness(1.12); }
+
+/* ---------- 面板：放大到真实尺寸 ---------- */
+body.is-touch .panel {
+  width: calc(var(--ssw) * 0.96);
+  height: calc(var(--ssh) * 0.9);
+  max-height: none;
+  transform: translate(-50%, -50%) scale(var(--inv));
+  border-width: 2px;
+  z-index: 40;
+}
+body.is-touch .panel-body { min-height: 0; touch-action: pan-y; }
+body.is-touch .panel-inv,
+body.is-touch .panel-help,
+body.is-touch .panel-stat,
+body.is-touch .panel-quest { width: calc(var(--ssw) * 0.96); }
+body.is-touch .inv-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+body.is-touch .help-grid { grid-template-columns: 1fr 1fr; }
+body.is-touch .close-btn { width: 34px; height: 34px; font-size: 17px; }
+body.is-touch .inv-tip { display: none; }
+
+/* 背包在手机横屏下更紧凑，尽量少滚动 */
+body.is-touch .inv-body { gap: 9px; }
+body.is-touch .inv-right { width: 210px; }
+body.is-touch .inv-right .side-title { margin: 4px 0 3px; font-size: 10px; }
+body.is-touch .equip-row { padding: 3px 6px; }
+body.is-touch .equip-row .eq-name { font-size: 10.5px; }
+body.is-touch .equip-row .eq-ico { width: 28px; height: 28px; }
+body.is-touch .inv-grid { gap: 5px; padding: 7px; }
+body.is-touch .inv-slot { border-radius: 7px; }
+body.is-touch .panel-head { padding: 7px 12px; }
+body.is-touch .panel-title { font-size: 13px; }
+
+/* ---------- 开始界面 ---------- */
+body.is-touch .start-card {
+  width: calc(var(--ssw) * 0.94);
+  max-height: calc(var(--ssh) * 0.96);
+  overflow: auto;
+  padding: 16px 22px 14px;
+  transform: scale(var(--inv));
+  animation: none;
+}
+body.is-touch .start-card h1 { font-size: 27px; margin: 4px 0 6px; }
+body.is-touch .start-sub { font-size: 11.5px; margin-bottom: 10px; }
+body.is-touch .start-features { display: none; }
+body.is-touch .start-controls {
+  font-size: 10.5px;
+  gap: 5px 10px;
+  margin-bottom: 12px;
+}
+body.is-touch .start-btn { height: 46px; font-size: 15px; }
+body.is-touch .start-foot { font-size: 9.5px; margin-top: 7px; }
+
+/* ---------- 通关结算 ---------- */
+body.is-touch .ending-card {
+  width: calc(var(--ssw) * 0.86);
+  max-height: calc(var(--ssh) * 0.94);
+  overflow: auto;
+  padding: 18px 22px 16px;
+  transform: scale(var(--inv));
+}
+body.is-touch .ending-veil.show .ending-card { transform: scale(var(--inv)); }
+body.is-touch .ending-card h2 { font-size: 21px; }
+
+/* ---------- 竖屏提示 ---------- */
+#rotate-hint {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  color: #e8f3ff;
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  background: radial-gradient(circle at 50% 38%, #16324a 0%, #081420 62%, #04080d 100%);
+}
+body.is-touch.is-portrait #rotate-hint:not(.skip) { display: flex; }
+#rotate-hint .rh-phone {
+  position: relative;
+  width: 46px;
+  height: 76px;
+  border: 3px solid #7fd0ff;
+  border-radius: 9px;
+  box-shadow: 0 0 26px rgba(90, 190, 255, 0.45);
+  margin-bottom: 4px;
+  transform-origin: center;
+  animation: rhTip 2.4s ease-in-out infinite;
+}
+#rotate-hint .rh-phone span {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 14px;
+  height: 3px;
+  margin-left: -7px;
+  border-radius: 2px;
+  background: rgba(160, 220, 255, 0.8);
+}
+@keyframes rhTip {
+  0%, 32% { transform: rotate(0deg); }
+  55%, 100% { transform: rotate(-90deg); }
+}
+#rotate-hint .rh-title {
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+#rotate-hint .rh-sub {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #9fb9cf;
+  font-weight: 600;
+}
+#rotate-hint button {
+  margin-top: 8px;
+  width: 168px;
+  height: 42px;
+  border: 0;
+  border-radius: 11px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #4a2a06;
+  background: linear-gradient(180deg, #ffe6a2, #ffc85e 52%, #eda832);
+  box-shadow: 0 4px 0 #b2761a, 0 8px 18px rgba(180, 120, 20, 0.4);
+}
+#rotate-hint button:active { transform: translateY(2px); box-shadow: 0 2px 0 #b2761a; }
