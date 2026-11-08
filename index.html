@@ -22,7 +22,7 @@
           <div class="char-info">
             <div class="char-head">
               <span class="char-name" id="char-name">Lv.1 弓箭手</span>
-              <span class="channel">CH.1</span>
+              <span class="channel" id="hud-chapter">CH.1</span>
             </div>
             <div class="bar hp">
               <div class="fill" id="hp-fill"></div>
@@ -55,10 +55,10 @@
         <div class="map-head">
           <span class="dot"></span>
           <span id="map-name">蘑菇森林</span>
-          <span class="map-ch">CH.1</span>
+          <span class="map-ch" id="map-ch">CH.1</span>
         </div>
         <div class="map-body"><canvas id="minimap-canvas" width="216" height="148"></canvas></div>
-        <div class="map-foot"><span>射手村 · 郊外</span><span id="map-online">在线 32</span></div>
+        <div class="map-foot"><span id="map-sub">射手村 · 郊外</span><span id="map-online">在线 32</span></div>
       </div>
       <div class="quest-track" id="quest-tracker"></div>
     </div>
@@ -180,7 +180,8 @@
         <div class="help-tips">
           <p>· 弓箭手是远程职业，保持距离、利用高台与绳索风筝怪物是核心思路。</p>
           <p>· 击杀怪物获得经验与战利品，升级后获得 5 点能力点，优先加 DEX 提升攻击力。</p>
-          <p>· 森林深处潜伏着 Lv.12 的蘑菇王，建议 8 级后带上足够的药水再去挑战。</p>
+          <p>· 四章地图依次为：蘑菇森林 → 幽暗洞穴 → 毒雾沼泽 → 天空遗迹，走到地图尽头按 ↑ 进入传送门。</p>
+          <p>· 传送门有等级门槛（Lv.8 / 14 / 20），每章守关 BOSS 建议比推荐等级再高 2 级挑战。</p>
         </div>
       </div>
     </div>
@@ -197,6 +198,25 @@
     <!-- 死亡提示 -->
     <div class="death-veil" id="death-veil">
       <div class="death-text">你被击倒了…</div>
+    </div>
+
+    <!-- 地图切换：黑场 + 地名横幅 -->
+    <div class="map-fade" id="map-fade"></div>
+    <div class="map-banner" id="map-banner">
+      <span class="mb-chapter" id="mb-chapter">第二章</span>
+      <span class="mb-name" id="mb-name">幽暗洞穴</span>
+      <span class="mb-sub" id="mb-sub">废弃矿坑 · 第三层</span>
+    </div>
+
+    <!-- 通关结算 -->
+    <div class="ending-veil" id="ending-veil">
+      <div class="ending-card">
+        <div class="ending-tag">ALL CHAPTERS CLEARED</div>
+        <h2>天空守望者 · 讨伐成功</h2>
+        <p class="ending-desc">千年的守望终结于一支箭。遗迹之上的云海重新流动，风把枫叶吹回了射手村。</p>
+        <div class="ending-stats" id="ending-stats"></div>
+        <button class="ending-btn" id="ending-btn">继续游历</button>
+      </div>
     </div>
 
     <!-- 道具/技能提示 -->

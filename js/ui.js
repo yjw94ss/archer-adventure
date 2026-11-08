@@ -1,5 +1,13 @@
 'use strict';
 
+/* 「第四章」→ 4 */
+const CN_NUM = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6 };
+function chapterNo(text) {
+  const ch = String(text || '');
+  for (const k in CN_NUM) if (ch.includes(k)) return CN_NUM[k];
+  return 1;
+}
+
 /* ============================================================
  *  矢量图标
  * ============================================================ */
@@ -145,6 +153,93 @@ const Art = {
       <circle cx="35" cy="33" r="1.6" fill="#fff3b0"/>
     `);
   },
+  wing() {
+    return this.wrap(`
+      <path d="M24 12 Q40 6 42 20 Q36 18 34 24 Q38 28 32 30 Q28 24 22 26 Z" fill="#6f52a0" stroke="#3d2c5c" stroke-width="1.4"/>
+      <path d="M24 12 Q8 6 6 20 Q12 18 14 24 Q10 28 16 30 Q20 24 26 26 Z" fill="#5c4488" stroke="#3d2c5c" stroke-width="1.4"/>
+      <path d="M24 14 L24 30" stroke="#2e2046" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="24" cy="33" r="3.4" fill="#ffd36a"/>
+      <path d="M21 17 L15 22 M27 17 L33 22" stroke="#c9b3ee" stroke-width="1.2" opacity="0.7"/>
+    `);
+  },
+  ore() {
+    return this.wrap(`
+      <path d="M10 38 L16 16 L24 10 L34 18 L38 38 Z" fill="#3d4a63" stroke="#232d3f" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M24 14 L30 22 L24 34 L18 22 Z" fill="#7fd8ff" stroke="#2f7fbe" stroke-width="1.2"/>
+      <path d="M24 16 L28 22 L24 30 Z" fill="#dff6ff" opacity="0.8"/>
+      <circle cx="15" cy="28" r="3" fill="#9be5ff" opacity="0.85"/>
+      <circle cx="35" cy="30" r="2.4" fill="#9be5ff" opacity="0.7"/>
+    `);
+  },
+  venom() {
+    return this.wrap(`
+      <rect x="20" y="7" width="8" height="6" rx="2" fill="#8a6a2a"/>
+      <path d="M20 13 L28 13 L28 16 Q36 19 36 27 L36 37 Q36 42 30 42 L18 42 Q12 42 12 37 L12 27 Q12 19 20 16 Z" fill="#f4fbee" stroke="#9fb69c" stroke-width="1.6"/>
+      <path d="M13 26 Q24 22 35 26 L35 37 Q35 41 30 41 L18 41 Q13 41 13 37 Z" fill="#5aa832"/>
+      <path d="M15 28 Q24 25 33 28 L33 32 Q24 29 15 32 Z" fill="#a8e06a" opacity="0.9"/>
+      <circle cx="20" cy="35" r="2" fill="#dcff9e" opacity="0.8"/>
+      <circle cx="27" cy="33" r="1.4" fill="#dcff9e" opacity="0.7"/>
+    `);
+  },
+  rune() {
+    return this.wrap(`
+      <path d="M14 40 L11 14 L37 10 L39 38 Z" fill="#b9b2d6" stroke="#6d6690" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M17 36 L15 16 L35 13 L36 34 Z" fill="#a49cc4" opacity="0.55"/>
+      <path d="M21 30 L24 18 L27 26 L30 20" stroke="#ffe08a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      <circle cx="24" cy="18" r="1.8" fill="#fff3c0"/>
+    `);
+  },
+  elixir() {
+    return this.wrap(`
+      <rect x="20" y="6" width="8" height="6" rx="2" fill="#b98a3c"/>
+      <path d="M20 12 L28 12 L28 15 Q37 18 37 28 L37 36 Q37 42 30 42 L18 42 Q11 42 11 36 L11 28 Q11 18 20 15 Z" fill="#fffdf4" stroke="#c2ac7e" stroke-width="1.6"/>
+      <path d="M12 26 Q24 21 36 26 L36 36 Q36 41 30 41 L18 41 Q12 41 12 36 Z" fill="#f0a92c"/>
+      <path d="M14 28 Q24 24 34 28 L34 32 Q24 28 14 32 Z" fill="#ffe08a" opacity="0.9"/>
+      <path d="M24 16 L26 21 L24 25 L22 21 Z" fill="#fff6d2"/>
+      <circle cx="20" cy="35" r="1.8" fill="#fff3c0"/>
+      <circle cx="28" cy="33" r="1.4" fill="#fff3c0"/>
+    `);
+  },
+  bow3() {
+    return this.wrap(`
+      <path d="M13 8 Q36 24 13 40" fill="none" stroke="#4f9a5e" stroke-width="4.2" stroke-linecap="round"/>
+      <path d="M13 8 Q33 24 13 40" fill="none" stroke="#9ce8a8" stroke-width="1.4"/>
+      <path d="M14 10 L17 24 L14 38" fill="none" stroke="#d7ffdf" stroke-width="1.3" opacity="0.9"/>
+      <path d="M17 24 L38 24" stroke="#eef6ff" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M43 24 L34 20.5 L34 27.5 Z" fill="#9cf0b0"/>
+      <ellipse cx="20" cy="24" rx="3" ry="4.4" fill="#d7ffe0" opacity="0.75"/>
+    `);
+  },
+  bow4() {
+    return this.wrap(`
+      <path d="M13 7 Q37 24 13 41" fill="none" stroke="#d9a63c" stroke-width="4.4" stroke-linecap="round"/>
+      <path d="M13 7 Q34 24 13 41" fill="none" stroke="#ffe8a8" stroke-width="1.6"/>
+      <path d="M14 9 L17 24 L14 39" fill="none" stroke="#fff6cf" stroke-width="1.4"/>
+      <path d="M17 24 L38 24" stroke="#fffaf0" stroke-width="2" stroke-linecap="round"/>
+      <path d="M44 24 L34 19.6 L34 28.4 Z" fill="#ffe08a" stroke="#b8791a" stroke-width="1"/>
+      <path d="M20 8 L22 12 L20 16 L18 12 Z" fill="#fff3c0"/>
+      <path d="M20 32 L22 36 L20 40 L18 36 Z" fill="#fff3c0"/>
+    `);
+  },
+  armor2() {
+    return this.wrap(`
+      <path d="M16 10 L22 12 L26 12 L32 10 L38 16 L34 22 L34 40 L14 40 L14 22 L10 16 Z" fill="#5a4b7e" stroke="#33294d" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M22 12 L24 20 L26 12" fill="#2d2544"/>
+      <path d="M14 26 L34 26 L34 32 L14 32 Z" fill="#42355f"/>
+      <circle cx="24" cy="29" r="2.6" fill="#9be5ff"/>
+      <path d="M17 14 L14 24 M31 14 L34 24" stroke="#9b8cc6" stroke-width="1.4" opacity="0.75"/>
+      <path d="M19 36 L29 36" stroke="#9b8cc6" stroke-width="1.2" opacity="0.6"/>
+    `);
+  },
+  ring2() {
+    return this.wrap(`
+      <circle cx="24" cy="30" r="9.5" fill="none" stroke="#e0a93c" stroke-width="4"/>
+      <path d="M24 7 L31 15 L24 21 L17 15 Z" fill="#ff7a5d" stroke="#a8321a" stroke-width="1.4"/>
+      <path d="M24 10 L27.5 15 L24 18 L20.5 15 Z" fill="#ffd0a8" opacity="0.8"/>
+      <path d="M33 22 Q39 18 42 12 M36 24 Q41 22 43 17" stroke="#8fe6ff" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      <circle cx="34" cy="34" r="1.6" fill="#fff3b0"/>
+    `);
+  },
   skillIcon(name) {
     return this[name] ? this[name]() : this.arrow();
   },
@@ -166,7 +261,8 @@ class UI {
       'toast-wrap', 'boss-bar', 'boss-name', 'boss-lv', 'boss-hp-fill', 'boss-hp-text', 'inv-grid',
       'inv-meso', 'inv-slots', 'equip-slots', 'equip-summary', 'combat-summary', 'stat-list', 'ap-left', 'stat-level',
       'stat-exp', 'quest-list', 'buff-bar', 'tooltip', 'hurt-flash', 'levelup-banner', 'lu-sub',
-      'death-veil', 'sound-btn',
+      'death-veil', 'sound-btn', 'map-name', 'map-sub', 'map-fade', 'map-banner', 'mb-chapter', 'mb-name', 'mb-sub',
+      'map-ch', 'hud-chapter', 'ending-veil', 'ending-stats', 'ending-btn',
     ];
     ids.forEach((id) => (this.el[id] = document.getElementById(id)));
     this.mm = this.el['minimap-canvas'].getContext('2d');
@@ -295,6 +391,9 @@ class UI {
     document.querySelectorAll('.panel').forEach((p) => {
       p.addEventListener('mousedown', (e) => e.stopPropagation());
     });
+    if (this.el['ending-btn']) {
+      this.el['ending-btn'].addEventListener('click', () => this.game.resumeAfterEnding());
+    }
   }
 
   /* ---------- 提示 ---------- */
@@ -514,6 +613,46 @@ class UI {
     this.drawMinimap();
   }
 
+  /* ---------- 地图信息 ---------- */
+  setMapInfo(def) {
+    if (!def) return;
+    this.el['map-name'].textContent = def.name;
+    this.el['map-sub'].textContent = def.sub;
+    const n = chapterNo(def.chapter);
+    if (this.el['map-ch']) this.el['map-ch'].textContent = 'CH.' + n;
+    if (this.el['hud-chapter']) this.el['hud-chapter'].textContent = 'CH.' + n;
+  }
+
+  /* ---------- 通关结算 ---------- */
+  showEnding(rows) {
+    const box = this.el['ending-stats'];
+    if (box) {
+      box.innerHTML = rows
+        .map(([k, v]) => `<div class="st"><span>${k}</span><b>${v}</b></div>`)
+        .join('');
+    }
+    if (this.el['ending-veil']) this.el['ending-veil'].classList.add('show');
+  }
+
+  hideEnding() {
+    if (this.el['ending-veil']) this.el['ending-veil'].classList.remove('show');
+  }
+
+  showMapBanner(def) {
+    if (!def) return;
+    this.el['mb-chapter'].textContent = def.chapter || '';
+    this.el['mb-name'].textContent = def.name;
+    this.el['mb-sub'].textContent = def.sub + '　推荐 ' + def.suggestLv;
+    const b = this.el['map-banner'];
+    b.classList.add('show');
+    clearTimeout(this._bannerTimer);
+    this._bannerTimer = setTimeout(() => b.classList.remove('show'), 2200);
+  }
+
+  fadeMap(on) {
+    this.el['map-fade'].classList.toggle('show', !!on);
+  }
+
   /* ---------- 小地图 ---------- */
   drawMinimap() {
     const ctx = this.mm;
@@ -524,13 +663,14 @@ class UI {
     const sy = (H - pad * 2) / WORLD_H;
 
     ctx.clearRect(0, 0, W, H);
+    const th = theme();
     const bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, '#f4eeda');
-    bg.addColorStop(1, '#e2d9bf');
+    bg.addColorStop(0, th.mm[0]);
+    bg.addColorStop(1, th.mm[1]);
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    ctx.strokeStyle = 'rgba(150,135,105,0.16)';
+    ctx.strokeStyle = th.id === 'cave' ? 'rgba(150,195,235,0.14)' : 'rgba(150,135,105,0.16)';
     ctx.lineWidth = 1;
     for (let x = 0; x < W; x += 16) {
       ctx.beginPath();
@@ -548,14 +688,29 @@ class UI {
     // 平台
     MAP.platforms.forEach((p) => {
       if (p.ground) {
-        ctx.fillStyle = 'rgba(122,95,58,0.8)';
+        ctx.fillStyle = th.id === 'cave' || th.id === 'ruins' ? 'rgba(110,120,150,0.85)' : 'rgba(122,95,58,0.8)';
         ctx.fillRect(pad + p.x * sx, pad + p.y * sy, p.w * sx, 6);
-        ctx.fillStyle = 'rgba(96,160,74,0.75)';
+        ctx.fillStyle = th.mmPlat;
         ctx.fillRect(pad + p.x * sx, pad + p.y * sy - 1, p.w * sx, 2);
       } else {
-        ctx.fillStyle = 'rgba(94,140,80,0.95)';
+        ctx.fillStyle = th.mmPlat;
         ctx.fillRect(pad + p.x * sx, pad + p.y * sy, p.w * sx, 4);
       }
+    });
+
+    // 传送门
+    (MAP.portals || []).forEach((pt) => {
+      const x = pad + pt.x * sx;
+      const y = pad + pt.y * sy;
+      ctx.fillStyle = 'rgba(120,240,180,0.9)';
+      ctx.beginPath();
+      ctx.arc(x, y - 2, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(180,255,220,0.55)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(x, y - 2, 5, 0, Math.PI * 2);
+      ctx.stroke();
     });
 
     // 绳索 / 梯子
@@ -761,16 +916,21 @@ class UI {
       const def = q.def;
       const name = MONSTER_TYPES[def.monster].name;
       const pct = clamp((q.progress / def.need) * 100, 0, 100);
-      const stateLabel = {
-        available: '可接取',
-        active: '进行中',
-        ready: '可领取',
-        done: '已完成',
-      }[q.state];
-      const stateCls = { available: '', active: 'active', ready: 'ready', done: 'done' }[q.state];
+      const locked = q.state === 'available' && def.reqLv && this.game.player.level < def.reqLv;
+      const stateLabel = locked
+        ? '未解锁'
+        : {
+            available: '可接取',
+            active: '进行中',
+            ready: '可领取',
+            done: '已完成',
+          }[q.state];
+      const stateCls = locked ? 'done' : { available: '', active: 'active', ready: 'ready', done: 'done' }[q.state];
       const rewardItems = def.rewards.items.map((it) => ITEMS[it.id].name + '×' + it.qty).join('、');
       let action = '';
-      if (q.state === 'available') {
+      if (locked) {
+        action = `<button class="btn" disabled>需要 Lv.${def.reqLv}</button>`;
+      } else if (q.state === 'available') {
         action = `<button class="btn" data-quest-action="accept" data-quest-id="${def.id}">接受委托</button>`;
       } else if (q.state === 'ready') {
         action = `<button class="btn gold" data-quest-action="claim" data-quest-id="${def.id}">领取奖励</button>`;

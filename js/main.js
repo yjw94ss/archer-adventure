@@ -16,6 +16,7 @@ class Game {
       down: false,
       jump: false,
       jumpPressed: false,
+      upPressed: false,
       attack: false,
       mouseActive: false,
       mouseScreenX: 700,
@@ -45,6 +46,13 @@ class Game {
     this.keyAttack = false;
     this.flashTimer = 0;
 
+    this.mapId = 'forest';
+    this.transition = null;
+    this.portalCd = 0;
+    this.nearPortal = null;
+    this.endingShown = false;
+    this.finalCleared = false;
+
     this.player = new Player(this, MAP.spawn.x, MAP.spawn.y);
     this.quests = QUESTS.map((def) => ({ def, state: 'available', progress: 0 }));
 
@@ -59,6 +67,81 @@ class Game {
     this.layout();
     window.addEventListener('resize', () => this.layout());
     this.ui.update(0);
+    this.ui.setMapInfo(MAP);
+  }
+
+  /* ---------- 地图切换 ---------- */
+  travelTo(to, entry) {
+    if (this.transition) return;
+    this.transition = { t: 0, to, entry, swapped: false };
+    this.portalCd = 1.2;
+    this.ui.fadeMap(true);
+    Sound.skill();
+  }
+
+  applyMap(id, entry, silent) {
+    const def = setMap(id);
+    if (!def) return;
+    this.mapId = id;
+    const e = def.entries[entry] || def.spawn;
+    const p = this.player;
+    p.x = e.x;
+    p.y = e.y;
+    p.vx = 0;
+    p.vy = 0;
+    p.climbing = false;
+    p.onGround = true;
+    p.groundPlatform = null;
+    p.invuln = 1.2;
+    this.monsters = def.spawns.map((s) => new Monster(this, s));
+    this.arrows.length = 0;
+    this.enemyShots.length = 0;
+    this.loots.length = 0;
+    this.rainZones.length = 0;
+    this.nearPortal = null;
+    this.camera.x = clamp(p.x - VIEW_W / 2, 0, WORLD_W - VIEW_W);
+    this.camera.y = clamp(p.y - VIEW_H * 0.62, 0, WORLD_H - VIEW_H);
+    this.ui.setMapInfo(def);
+    if (!silent) {
+      this.ui.showMapBanner(def);
+      this.ui.log(`进入 ${def.name} · ${def.sub}（推荐等级 ${def.suggestLv}）`, 'sys');
+      this.hintQuest(def);
+    }
+  }
+
+  /* 进入地图时提示可接的委托 */
+  hintQuest(def) {
+    const types = new Set((def.spawns || []).map((s) => s.type));
+    const q = this.quests.find(
+      (x) =>
+        x.state === 'available' &&
+        types.has(x.def.monster) &&
+        (!x.def.reqLv || this.player.level >= x.def.reqLv)
+    );
+    if (!q) return;
+    this.ui.toast('可接委托：' + q.def.name);
+    this.ui.log(`${q.def.giver} 似乎有话想说：按 T 打开任务日志接取「${q.def.name}」`, 'sys');
+  }
+
+  updatePortal(dt) {
+    this.nearPortal = null;
+    if (this.player.dead || this.transition) return;
+    const p = this.player;
+    for (const pt of MAP.portals || []) {
+      if (Math.abs(p.x - pt.x) > 64) continue;
+      if (p.y < pt.y - 150 || p.y > pt.y + 28) continue;
+      this.nearPortal = pt;
+      if (this.input.upPressed && this.portalCd <= 0) {
+        if (pt.reqLv && p.level < pt.reqLv) {
+          this.ui.toast(`需要 Lv.${pt.reqLv} 才能前往 ${pt.label}`);
+          this.ui.log(`传送门尚未开启：${pt.label} 需要 Lv.${pt.reqLv}`, 'sys');
+          this.portalCd = 1.4;
+          return;
+        }
+        this.travelTo(pt.to, pt.entry);
+        return;
+      }
+    }
   }
 
   /* ---------- 布局 ---------- */
@@ -99,6 +182,7 @@ class Game {
           break;
         case 'ArrowUp':
         case 'KeyW':
+          if (!e.repeat) inp.upPressed = true;
           inp.up = true;
           inp.aimMode = 'key';
           break;
@@ -379,10 +463,41 @@ class Game {
     });
 
     if (m.boss) {
-      this.ui.log('蘑菇王被击败了！森林恢复了平静。', 'sys');
-      this.ui.toast('讨伐成功：蘑菇王');
+      this.ui.log(`强大的 ${m.name} 被击败了！`, 'sys');
+      this.ui.toast('讨伐成功：' + m.name);
+      if (m.type !== 'sky_lord') {
+        const def = MAPS[this.mapId];
+        this.ui.log(`「${def ? def.chapter : ''}」守关 BOSS 已讨伐，可继续深入或返回补给`, 'good');
+      }
     }
     this.progressQuests(m.type);
+
+    if (m.type === 'sky_lord' && !this.finalCleared) {
+      setTimeout(() => this.showEnding(), 900);
+    }
+  }
+
+  /* ---------- 全章通关结算 ---------- */
+  showEnding() {
+    if (this.finalCleared) return;
+    this.finalCleared = true;
+    this.endingShown = true;
+    const p = this.player;
+    const cleared = this.quests.filter((q) => q.state === 'done').length;
+    this.ui.showEnding([
+      ['等级', 'Lv.' + p.level],
+      ['累计击杀', p.kills],
+      ['完成任务', cleared + ' / ' + QUESTS.length],
+      ['持有金币', p.gold],
+    ]);
+    this.ui.log('天空守望者已被讨伐，四章旅程告一段落。感谢游玩！', 'good');
+    Sound.levelup();
+  }
+
+  resumeAfterEnding() {
+    this.endingShown = false;
+    this.ui.hideEnding();
+    this.ui.toast('可以继续在遗迹中游历，或返回森林');
   }
 
   progressQuests(type) {
@@ -407,6 +522,10 @@ class Game {
   acceptQuest(id) {
     const q = this.quests.find((x) => x.def.id === id);
     if (!q || q.state !== 'available') return;
+    if (q.def.reqLv && this.player.level < q.def.reqLv) {
+      this.ui.toast(`需要 Lv.${q.def.reqLv} 才能接受该委托`);
+      return;
+    }
     q.state = 'active';
     q.progress = 0;
     this.ui.toast('已接受任务：' + q.def.name);
@@ -476,6 +595,28 @@ class Game {
   update(dt) {
     this.time += dt;
     const p = this.player;
+
+    /* ---- 通关结算中：暂停世界 ---- */
+    if (this.endingShown) {
+      this.ui.update(dt);
+      return;
+    }
+
+    /* ---- 地图切换过场 ---- */
+    if (this.transition) {
+      const tr = this.transition;
+      tr.t += dt;
+      if (!tr.swapped && tr.t >= 0.26) {
+        tr.swapped = true;
+        this.applyMap(tr.to, tr.entry);
+      }
+      if (tr.t >= 0.56) {
+        this.transition = null;
+        this.ui.fadeMap(false);
+      }
+      this.ui.update(dt);
+      return;
+    }
 
     // 鼠标世界坐标（跟随相机）
     this.input.mouseWorldX = this.input.mouseScreenX + this.camera.x;
@@ -576,6 +717,11 @@ class Game {
     // 死亡覆盖
     if (!p.dead) this.ui.setDead(false);
 
+    // 传送门
+    if (this.portalCd > 0) this.portalCd -= dt;
+    this.updatePortal(dt);
+    this.input.upPressed = false;
+
     this.ui.update(dt);
   }
 
@@ -598,6 +744,7 @@ class Game {
     drawGroundDecor(ctx, cam, this.time);
     drawRopes(ctx, cam, this.time);
     drawSigns(ctx, cam);
+    drawPortals(ctx, cam, this.time, this.nearPortal);
 
     // 箭雨落点
     this.rainZones.forEach((z) => {
@@ -771,7 +918,7 @@ if (__test) {
       document.body.appendChild(dbg);
       setInterval(() => {
         const bb = document.getElementById('boss-bar');
-        dbg.textContent = `x=${p.x.toFixed(1)} y=${p.y.toFixed(1)} vy=${p.vy.toFixed(1)} onGround=${p.onGround} gp=${p.groundPlatform ? p.groundPlatform.y : '-'} climb=${p.climbing} camY=${game.camera.y.toFixed(1)} kills=${p.kills} exp=${p.exp} lv=${p.level} loot=${game.loots.length} arrows=${game.arrows.length} monAlive=${game.monsters.filter((m) => !m.dead).length} inv=${p.inventory.length} bossOp=${getComputedStyle(bb).opacity}`;
+        dbg.textContent = `map=${game.mapId} x=${p.x.toFixed(1)} y=${p.y.toFixed(1)} vy=${p.vy.toFixed(1)} onGround=${p.onGround} gp=${p.groundPlatform ? p.groundPlatform.y : '-'} climb=${p.climbing} camY=${game.camera.y.toFixed(1)} kills=${p.kills} exp=${p.exp} lv=${p.level} loot=${game.loots.length} arrows=${game.arrows.length} monAlive=${game.monsters.filter((m) => !m.dead).length} inv=${p.inventory.length} portalCd=${game.portalCd.toFixed(2)} near=${game.nearPortal ? game.nearPortal.label : '-'} trans=${!!game.transition}`;
       }, 100);
 
       if (__test === '1') {
@@ -826,10 +973,138 @@ if (__test) {
           game.castSkill('rain');
           game.castSkill('triple');
         }, 700);
+      } else if (__test === 'map') {
+        // 直接切到指定地图观察
+        const mid = __params.get('m') || 'cave';
+        const lv = Number(__params.get('lv') || 12);
+        p.level = lv;
+        p.recalcStats(true);
+        game.applyMap(mid, 'west', true);
+        if (__params.get('sx')) {
+          p.x = Number(__params.get('sx'));
+          p.y = Number(__params.get('sy') || 1300);
+          p.vy = 0;
+          game.camera.x = clamp(p.x - VIEW_W / 2, 0, WORLD_W - VIEW_W);
+          game.camera.y = clamp(p.y - VIEW_H * 0.62, 0, WORLD_H - VIEW_H);
+        }
+      } else if (__test === 'ending') {
+        // 预览终章通关结算
+        p.level = 28;
+        p.recalcStats(true);
+        p.kills = 268;
+        p.gold = 86420;
+        game.applyMap('ruins', 'west', true);
+        setTimeout(() => game.showEnding(), 120);
+      } else if (__test === 'bosskill') {
+        // 验证 BOSS 死亡 → 通关结算
+        const mid = __params.get('m') || 'ruins';
+        p.level = 28;
+        p.recalcStats(true);
+        game.applyMap(mid, 'west', true);
+        const boss = game.monsters.find((m) => m.boss);
+        if (boss) boss.hurt(999999, false, boss.x + 10);
+        for (let i = 0; i < 120; i++) game.update(1 / 60);
+        setTimeout(() => {
+          const veil = document.getElementById('ending-veil');
+          const o = document.createElement('div');
+          o.id = 'simout';
+          o.textContent = `BOSS ${boss ? boss.name + '@' + boss.type : 'NONE'} dead=${boss ? boss.dead : '-'} ` +
+            `ending=${game.endingShown} veil="${veil.className}" frozen=${game.time} map=${game.mapId}`;
+          document.body.appendChild(o);
+        }, 1600);
+      } else if (__test === 'portal') {
+        // 确定性验证：等级门槛 → 按 ↑ 传送 → 过场落点
+        const out = [];
+        const step = (n) => { for (let i = 0; i < n; i++) game.update(1 / 60); };
+        const goPortal = () => { inp.upPressed = true; game.update(1 / 60); };
+
+        p.level = 5;
+        p.recalcStats(true);
+        p.x = 3120;
+        p.y = 1240;
+        p.vy = 0;
+        step(6);
+        out.push(`lv5 near=${game.nearPortal ? game.nearPortal.label : '-'}`);
+        goPortal();
+        step(10);
+        out.push(`lv5_gate map=${game.mapId} cd=${game.portalCd.toFixed(1)}`);
+
+        p.level = 12;
+        p.recalcStats(true);
+        game.portalCd = 0;
+        step(4);
+        goPortal();
+        out.push(`press tr=${!!game.transition}`);
+        step(45);
+        out.push(`after map=${game.mapId} champ=${document.getElementById('map-ch').textContent} ` +
+          `x=${p.x.toFixed(0)} y=${p.y.toFixed(0)} ground=${p.onGround}`);
+
+        // 反向传送：洞穴西侧回到森林
+        p.x = 90;
+        p.y = 1360;
+        p.vy = 0;
+        game.portalCd = 0;
+        step(6);
+        goPortal();
+        step(45);
+        out.push(`back map=${game.mapId} champ=${document.getElementById('map-ch').textContent}`);
+
+        const o = document.createElement('div');
+        o.id = 'simout';
+        o.textContent = 'PORTAL ' + out.join(' | ');
+        document.body.appendChild(o);
+      } else if (__test === 'portalsim') {
+        // 确定性验证：静态校验 + 每张地图落点 + 传送链
+        const out = [];
+        let bad = 0;
+        for (const id in MAPS) {
+          const m = MAPS[id];
+          (m.portals || []).forEach((pt) => {
+            if (!MAPS[pt.to]) {
+              out.push(`BAD_TARGET ${id}.${pt.label}->${pt.to}`);
+              bad++;
+            } else if (!MAPS[pt.to].entries[pt.entry]) {
+              out.push(`BAD_ENTRY ${id}->${pt.to}:${pt.entry}`);
+              bad++;
+            }
+          });
+          const es = Object.keys(m.entries || {});
+          if (!es.length) {
+            out.push(`NO_ENTRY ${id}`);
+            bad++;
+          }
+        }
+        p.level = 30;
+        p.recalcStats(true);
+        const hop = (id, entry) => {
+          game.applyMap(id, entry, true);
+          for (let i = 0; i < 150; i++) game.update(1 / 60);
+          out.push(`${id}@${Math.round(p.x)},${Math.round(p.y)} ground=${p.onGround} hp=${Math.round(p.hp)} mon=${game.monsters.length}`);
+        };
+        hop('cave', 'west');
+        hop('swamp', 'west');
+        hop('ruins', 'west');
+        hop('forest', 'east');
+        // 传送链
+        game.applyMap('forest', 'east', true);
+        game.travelTo('cave', 'west');
+        for (let i = 0; i < 90; i++) game.update(1 / 60);
+        out.push(`travel1=${game.mapId}`);
+        game.travelTo('swamp', 'west');
+        for (let i = 0; i < 90; i++) game.update(1 / 60);
+        out.push(`travel2=${game.mapId}`);
+        game.travelTo('ruins', 'west');
+        for (let i = 0; i < 90; i++) game.update(1 / 60);
+        out.push(`travel3=${game.mapId} lv=${p.level}`);
+        const o = document.createElement('div');
+        o.id = 'simout';
+        o.textContent = `PORTALSIM bad=${bad} | ` + out.join(' | ');
+        document.body.appendChild(o);
       } else if (__test === 'sim') {
         // 固定步长无头模拟：验证战斗、掉落、升级、任务链路
         const sec = Number(__params.get('sec') || 40);        const dt = 1 / 60;
         const steps = Math.round(sec / dt);
+        if (__params.get('m')) game.applyMap(__params.get('m'), __params.get('entry') || 'west', true);
         if (__params.get('lv')) {
           p.level = Number(__params.get('lv'));
           p.recalcStats(true);

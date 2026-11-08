@@ -6,8 +6,10 @@
 
 const VIEW_W = 1280;
 const VIEW_H = 720;
-const WORLD_W = 3200;
-const WORLD_H = 1360;
+
+/* 世界尺寸随当前地图变化（由 world.js 的 setMap 更新） */
+let WORLD_W = 3200;
+let WORLD_H = 1360;
 
 const GRAVITY = 2200;
 const FIXED_DT = 1 / 60;
@@ -143,6 +145,65 @@ const ITEMS = {
     price: 800,
     desc: '攻击力 +4，DEX +3',
   },
+
+  /* ---- 洞穴 / 沼泽 / 遗迹素材 ---- */
+  wing: { name: '蝙蝠翅膀', icon: 'wing', kind: 'etc', stack: true, price: 48, desc: '薄如蝉翼的暗紫色翅膀，还带着洞窟的寒气。' },
+  ore: { name: '魔法矿石', icon: 'ore', kind: 'etc', stack: true, price: 76, desc: '洞穴深处结晶的蓝色矿石，内部有魔力流动。' },
+  venom: { name: '毒囊', icon: 'venom', kind: 'etc', stack: true, price: 94, desc: '沼泽生物体内的囊袋，散发刺鼻的酸味。' },
+  rune: { name: '遗迹符文', icon: 'rune', kind: 'etc', stack: true, price: 155, desc: '刻着古老文字的碎石，仍有微光沿着刻痕游走。' },
+  elixir: {
+    name: '万能药水',
+    icon: 'elixir',
+    kind: 'use',
+    stack: true,
+    price: 180,
+    heal: 320,
+    mana: 180,
+    desc: '同时恢复 320 HP 与 180 MP，深处冒险的必需品。',
+  },
+
+  /* ---- 中后期装备 ---- */
+  bow3: {
+    name: '精灵长弓',
+    icon: 'bow3',
+    kind: 'equip',
+    slot: 'weapon',
+    atk: 34,
+    crit: 0.06,
+    price: 4200,
+    desc: '攻击力 +34，暴击率 +6%',
+  },
+  bow4: {
+    name: '苍穹神弓',
+    icon: 'bow4',
+    kind: 'equip',
+    slot: 'weapon',
+    atk: 56,
+    dex: 10,
+    crit: 0.1,
+    price: 12000,
+    desc: '攻击力 +56，DEX +10，暴击率 +10%',
+  },
+  armor2: {
+    name: '幽影战甲',
+    icon: 'armor2',
+    kind: 'equip',
+    slot: 'armor',
+    hp: 220,
+    atk: 6,
+    price: 6000,
+    desc: '最大HP +220，攻击力 +6',
+  },
+  ring2: {
+    name: '猎鹰指环',
+    icon: 'ring2',
+    kind: 'equip',
+    slot: 'ring',
+    atk: 10,
+    crit: 0.04,
+    price: 5200,
+    desc: '攻击力 +10，暴击率 +4%',
+  },
 };
 
 const EQUIP_SLOT_LABEL = { weapon: '武器', armor: '防具', ring: '饰品' };
@@ -212,6 +273,7 @@ const MONSTER_TYPES = {
     h: 108,
     body: 'boss',
     boss: true,
+    ranged: { kind: 'spore', cd: 2.8, dmg: 0.75, speed: 320 },
     drops: [
       { id: 'meso', chance: 1, min: 300, max: 520 },
       { id: 'hp_potion', chance: 1, qty: 8 },
@@ -219,6 +281,182 @@ const MONSTER_TYPES = {
       { id: 'bow2', chance: 0.55, qty: 1 },
       { id: 'ring1', chance: 0.4, qty: 1 },
       { id: 'armor1', chance: 0.45, qty: 1 },
+    ],
+  },
+
+  /* ============ 第二章：幽暗洞穴 ============ */
+  bat: {
+    name: '洞穴蝙蝠',
+    level: 10,
+    maxHp: 280,
+    atk: 24,
+    exp: 165,
+    speed: 104,
+    w: 46,
+    h: 28,
+    body: 'bat',
+    flying: true,
+    drops: [
+      { id: 'meso', chance: 1, min: 38, max: 88 },
+      { id: 'wing', chance: 0.58, qty: 1 },
+      { id: 'hp_potion', chance: 0.22, qty: 1 },
+    ],
+  },
+  golem: {
+    name: '岩石魔像',
+    level: 13,
+    maxHp: 700,
+    atk: 33,
+    exp: 345,
+    speed: 34,
+    w: 62,
+    h: 72,
+    body: 'golem',
+    drops: [
+      { id: 'meso', chance: 1, min: 70, max: 148 },
+      { id: 'ore', chance: 0.52, qty: 1 },
+      { id: 'hp_potion', chance: 0.3, qty: 2 },
+      { id: 'armor1', chance: 0.05, qty: 1 },
+    ],
+  },
+  golem_king: {
+    name: '石魔领主',
+    level: 17,
+    maxHp: 5600,
+    atk: 52,
+    exp: 4200,
+    speed: 52,
+    w: 124,
+    h: 112,
+    body: 'golemKing',
+    boss: true,
+    drops: [
+      { id: 'meso', chance: 1, min: 900, max: 1500 },
+      { id: 'elixir', chance: 1, qty: 6 },
+      { id: 'ore', chance: 1, qty: 5 },
+      { id: 'bow3', chance: 0.6, qty: 1 },
+      { id: 'ring2', chance: 0.5, qty: 1 },
+      { id: 'armor2', chance: 0.5, qty: 1 },
+    ],
+  },
+
+  /* ============ 第三章：毒雾沼泽 ============ */
+  toad: {
+    name: '毒沼蟾蜍',
+    level: 16,
+    maxHp: 580,
+    atk: 31,
+    exp: 320,
+    speed: 56,
+    w: 68,
+    h: 50,
+    body: 'toad',
+    jumper: true,
+    drops: [
+      { id: 'meso', chance: 1, min: 90, max: 190 },
+      { id: 'venom', chance: 0.55, qty: 1 },
+      { id: 'mp_potion', chance: 0.3, qty: 2 },
+      { id: 'elixir', chance: 0.08, qty: 1 },
+    ],
+  },
+  plant: {
+    name: '食人花',
+    level: 15,
+    maxHp: 430,
+    atk: 29,
+    exp: 255,
+    speed: 0,
+    w: 54,
+    h: 66,
+    body: 'plant',
+    static: true,
+    ranged: { kind: 'seed', cd: 1.9, dmg: 0.8, speed: 300 },
+    drops: [
+      { id: 'meso', chance: 1, min: 80, max: 165 },
+      { id: 'venom', chance: 0.45, qty: 1 },
+      { id: 'hp_potion', chance: 0.35, qty: 2 },
+    ],
+  },
+
+  toad_king: {
+    name: '毒沼蛙王',
+    level: 20,
+    maxHp: 7200,
+    atk: 46,
+    exp: 5600,
+    speed: 58,
+    w: 112,
+    h: 96,
+    body: 'toadKing',
+    boss: true,
+    jumper: true,
+    ranged: { kind: 'poison', cd: 2.5, dmg: 0.7, speed: 300 },
+    drops: [
+      { id: 'meso', chance: 1, min: 1300, max: 2000 },
+      { id: 'elixir', chance: 1, qty: 6 },
+      { id: 'venom', chance: 1, qty: 5 },
+      { id: 'bow3', chance: 0.45, qty: 1 },
+      { id: 'ring2', chance: 0.4, qty: 1 },
+      { id: 'armor2', chance: 0.45, qty: 1 },
+    ],
+  },
+
+  /* ============ 第四章：天空遗迹 ============ */
+  wisp: {
+    name: '幽灵术士',
+    level: 21,
+    maxHp: 820,
+    atk: 41,
+    exp: 560,
+    speed: 76,
+    w: 52,
+    h: 64,
+    body: 'wisp',
+    flying: true,
+    ranged: { kind: 'orb', cd: 2.4, dmg: 0.9, speed: 340 },
+    drops: [
+      { id: 'meso', chance: 1, min: 190, max: 360 },
+      { id: 'rune', chance: 0.5, qty: 1 },
+      { id: 'elixir', chance: 0.18, qty: 1 },
+    ],
+  },
+  sentinel: {
+    name: '遗迹守卫',
+    level: 24,
+    maxHp: 1300,
+    atk: 47,
+    exp: 800,
+    speed: 46,
+    w: 66,
+    h: 78,
+    body: 'sentinel',
+    charger: true,
+    drops: [
+      { id: 'meso', chance: 1, min: 260, max: 460 },
+      { id: 'rune', chance: 0.62, qty: 1 },
+      { id: 'elixir', chance: 0.24, qty: 1 },
+      { id: 'ring2', chance: 0.04, qty: 1 },
+    ],
+  },
+  sky_lord: {
+    name: '天空守望者',
+    level: 28,
+    maxHp: 9800,
+    atk: 62,
+    exp: 9200,
+    speed: 62,
+    w: 120,
+    h: 120,
+    body: 'skyLord',
+    boss: true,
+    ranged: { kind: 'orb', cd: 2.2, dmg: 0.85, speed: 380 },
+    drops: [
+      { id: 'meso', chance: 1, min: 2400, max: 3600 },
+      { id: 'elixir', chance: 1, qty: 10 },
+      { id: 'rune', chance: 1, qty: 8 },
+      { id: 'bow4', chance: 0.75, qty: 1 },
+      { id: 'armor2', chance: 0.65, qty: 1 },
+      { id: 'ring2', chance: 0.65, qty: 1 },
     ],
   },
 };
@@ -253,6 +491,103 @@ const QUESTS = [
     monster: 'mk',
     need: 1,
     rewards: { exp: 2600, meso: 1600, items: [{ id: 'armor1', qty: 1 }, { id: 'mp_potion', qty: 10 }] },
+  },
+
+  /* ---------- 第二章 · 幽暗洞穴 ---------- */
+  {
+    id: 'q4',
+    name: '洞窟的翅膀',
+    giver: '矿工 · 巴鲁',
+    desc: '洞里的蝙蝠群遮住了矿灯，矿工们不敢下井。清理 8 只洞穴蝙蝠，让矿道重见光明。',
+    monster: 'bat',
+    need: 8,
+    reqLv: 8,
+    rewards: { exp: 1600, meso: 1000, items: [{ id: 'elixir', qty: 3 }] },
+  },
+  {
+    id: 'q5',
+    name: '岩石的愤怒',
+    giver: '矿工 · 巴鲁',
+    desc: '沉睡了百年的岩石魔像被吵醒了，它们正把矿脉一寸寸砸碎。击碎 6 只岩石魔像。',
+    monster: 'golem',
+    need: 6,
+    reqLv: 12,
+    rewards: { exp: 3400, meso: 2100, items: [{ id: 'ore', qty: 5 }] },
+  },
+  {
+    id: 'q6',
+    name: '深渊之主',
+    giver: '矿工 · 巴鲁',
+    desc: '矿道尽头盘踞着石魔领主，它的拳头能震塌整条隧道。讨伐它，矿坑才能复工。',
+    monster: 'golem_king',
+    need: 1,
+    reqLv: 15,
+    rewards: { exp: 5600, meso: 3400, items: [{ id: 'bow3', qty: 1 }] },
+  },
+
+  /* ---------- 第三章 · 毒雾沼泽 ---------- */
+  {
+    id: 'q7',
+    name: '毒雾中的低鸣',
+    giver: '药师 · 薇拉',
+    desc: '沼泽的毒雾让蟾蜍变得暴躁。击退 8 只毒沼蟾蜍，我需要它们的毒囊配药。',
+    monster: 'toad',
+    need: 8,
+    reqLv: 16,
+    rewards: { exp: 6400, meso: 4000, items: [{ id: 'elixir', qty: 5 }] },
+  },
+  {
+    id: 'q8',
+    name: '会走的花',
+    giver: '药师 · 薇拉',
+    desc: '食人花把药圃当成了猎场。铲除 6 株食人花，让采药人敢重新进沼泽。',
+    monster: 'plant',
+    need: 6,
+    reqLv: 18,
+    rewards: { exp: 8600, meso: 5200, items: [{ id: 'armor2', qty: 1 }] },
+  },
+
+  {
+    id: 'q9',
+    name: '沼泽之王',
+    giver: '药师 · 薇拉',
+    desc: '毒雾的源头是一头盘踞在沼泽尽头的蛙王，它每跳一次，毒雾就浓一分。斩杀它，让湿地重新呼吸。',
+    monster: 'toad_king',
+    need: 1,
+    reqLv: 19,
+    rewards: { exp: 12000, meso: 6800, items: [{ id: 'ring2', qty: 1 }, { id: 'elixir', qty: 6 }] },
+  },
+
+  /* ---------- 第四章 · 天空遗迹 ---------- */
+  {
+    id: 'q10',
+    name: '遗迹的守望',
+    giver: '考古学家 · 赛勒斯',
+    desc: '漂浮的遗迹里游荡着不肯离去的幽灵术士。送 8 位术士回到长眠，才能继续考察。',
+    monster: 'wisp',
+    need: 8,
+    reqLv: 21,
+    rewards: { exp: 13000, meso: 7600, items: [{ id: 'elixir', qty: 8 }] },
+  },
+  {
+    id: 'q11',
+    name: '不会疲倦的守卫',
+    giver: '考古学家 · 赛勒斯',
+    desc: '遗迹守卫仍在执行千年前的命令，把一切活物当作入侵者。击毁 6 台守卫。',
+    monster: 'sentinel',
+    need: 6,
+    reqLv: 23,
+    rewards: { exp: 19000, meso: 11000, items: [{ id: 'ring2', qty: 1 }] },
+  },
+  {
+    id: 'q12',
+    name: '天空之王',
+    giver: '考古学家 · 赛勒斯',
+    desc: '守望者盘踞在遗迹顶端，它的羽翼遮住了最后的光。终结这场千年的守望。',
+    monster: 'sky_lord',
+    need: 1,
+    reqLv: 26,
+    rewards: { exp: 30000, meso: 18000, items: [{ id: 'bow4', qty: 1 }, { id: 'elixir', qty: 10 }] },
   },
 ];
 
